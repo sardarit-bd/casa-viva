@@ -40,6 +40,7 @@ const getMe = async (userId) => {
 };
 const credentialsLogin = async (payload) => {
     console.log(payload)
+    console.log(envVars.DB_URL)
   const { email, password } = payload;
 
   const isUserExist = await User.findOne({ email: email });

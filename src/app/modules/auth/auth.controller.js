@@ -22,7 +22,7 @@ const getMe = catchAsync(
     async (req, res, next) => {
         const verifiedToken = req.user;
 
-        const user = (await UserServices.getMe(verifiedToken.userId));
+        const user = await AuthServices.getMe(verifiedToken.userId);
 
         sendResponse(res, {
             statusCode: httpStatus.CREATED,
