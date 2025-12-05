@@ -21,11 +21,30 @@ app.get("/", (req, res) => {
 });
 
 
-await connectDB()
-console.log("Connected to DB");
-if (process.env.ENVAIRONMENT == 'development') {
-  const PORT = 5000;
-  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// await connectDB()
+// console.log("Connected to DB");
+// if (process.env.ENVAIRONMENT == 'development') {
+//   const PORT = 5000;
+//   app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// }
+// await seedSuperAdmin()
+let server
+
+const startServer = async() => {
+  try{
+    await mongoose.connect(envVars.DB_URL)
+    console.log('Connected to DB')
+
+    server = app.listen(process.env.PORT, () => {
+      console.log(`Server is listening to port ${process.env.PORT}`)
+    })
+  }catch(err){
+    console.log(err)
+  }
 }
-await seedSuperAdmin()
+
+(async () => {
+  await startServer()
+  seedSuperAdmin()
+})()
 export default app;
