@@ -2,9 +2,10 @@
 export const setAuthCookie = (res, tokenInfo) => {
     if (tokenInfo.accessToken) {
         res.cookie('accessToken', tokenInfo.accessToken, {
-            httpOnly: false,
-            secure: false,
-            sameSite: "none"
+            httpOnly: true,
+            secure: true,
+            sameSite: "none",
+            maxAge: 1000 * 60 * 60 * 24
         })
     }
 
