@@ -7,9 +7,9 @@ import { setAuthCookie } from "../../utils/setCookies.js";
 
 const createUser = catchAsync(
     async (req, res, next) => {
-        const user = await UserServices.createUser(req.body);
+        const user = await AuthServices.createUser(req.body);
 
-        sendResponse < IUser > (res, {
+        sendResponse (res, {
             statusCode: httpStatus.CREATED,
             success: true,
             message: "User Created Successfully",

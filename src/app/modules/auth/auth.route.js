@@ -10,5 +10,4 @@ router.post("/login", AuthControllers.credentialsLogin);
 router.post("/logout", AuthControllers.logout);
 
 
-
 export const AuthRoutes = router;

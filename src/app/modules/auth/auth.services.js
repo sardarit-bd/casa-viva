@@ -4,6 +4,7 @@ import httpStatus from 'http-status-codes'
 import bcryptjs from "bcryptjs";
 import { createUserTokens } from "../../utils/userTokens.js";
 import { User } from "./auth.model.js";
+import { envVars } from "../../config/env.js";
 
 const createUser = async (payload) => {
     const { email, password, ...rest } = payload;
@@ -38,12 +39,13 @@ const getMe = async (userId) => {
   return user;
 };
 const credentialsLogin = async (payload) => {
+    console.log(payload)
   const { email, password } = payload;
 
-  const isUserExist = await User.findOne({ email });
+  const isUserExist = await User.findOne({ email: email });
 
   if (!isUserExist) {
-    throw new AppError(httpStatus.BAD_REQUEST, "Email does not exist");
+    throw new AppError(httpStatus.BAD_REQUEST, "User does not exist");
   }
 
   const isPasswordMatched = await bcryptjs.compare(
