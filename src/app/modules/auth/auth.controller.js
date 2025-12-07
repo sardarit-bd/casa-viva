@@ -9,7 +9,7 @@ const createUser = catchAsync(
     async (req, res, next) => {
         const user = await AuthServices.createUser(req.body);
 
-        sendResponse (res, {
+        sendResponse(res, {
             statusCode: httpStatus.CREATED,
             success: true,
             message: "User Created Successfully",
@@ -51,8 +51,10 @@ const logout = catchAsync(
     async (req, res, next) => {
         res.clearCookie("accessToken", {
             httpOnly: true,
-            secure: false,
-            sameSite: "lax",
+            secure: envVars.ENVAIRONMENT === 'production', 
+            sameSite: envVars.ENVAIRONMENT === 'production' ? 'none' : 'lax',
+            maxAge: 24 * 60 * 60 * 1000, 
+            path: '/',
         });
         res.clearCookie("refreshToken", {
             httpOnly: true,
