@@ -1,11 +1,9 @@
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
 import { router } from "./app/routes/index.js";
 import { seedSuperAdmin } from "./app/utils/seedSuperAdmin.js";
 import mongoose from "mongoose";
 import { envVars } from "./app/config/env.js";
-import { connectDB } from "./app/config/db.js";
 
 import cookieParser from "cookie-parser";
 
@@ -40,7 +38,10 @@ let server
 
 const startServer = async () => {
   try {
-    await mongoose.connect(envVars.DB_URL)
+    await mongoose.connect(envVars.DB_URL, {
+      serverSelectionTimeoutMS: 30000,
+      connectTimeoutMS: 30000,
+    })
     console.log('Connected to DB')
 
     server = app.listen(process.env.PORT, () => {
