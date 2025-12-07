@@ -25,9 +25,9 @@ const getMe = catchAsync(
         const user = await AuthServices.getMe(verifiedToken.userId);
 
         sendResponse(res, {
-            statusCode: httpStatus.CREATED,
+            statusCode: httpStatus.OK,
             success: true,
-            message: "User Updated Successfully",
+            message: "User fetched Successfully",
             data: user,
         });
     }

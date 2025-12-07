@@ -10,8 +10,7 @@ export const checkAuth =
   (...roles) =>
   async (req, res, next ) => {
     try {
-      console.log(req.headers, req.cookies);
-      const accessToken = req.headers.authorization || req.cookies.accessToken;
+      const accessToken = req?.headers?.authorization || req?.cookies?.accessToken;
 
       if (!accessToken) {
         throw new AppError(403, "Missing Access Token");

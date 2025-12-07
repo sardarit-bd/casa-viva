@@ -7,9 +7,12 @@ import mongoose from "mongoose";
 import { envVars } from "./app/config/env.js";
 import { connectDB } from "./app/config/db.js";
 
+import cookieParser from "cookie-parser";
+
 
 const app = express();
 app.use(express.json());
+app.use(cookieParser());
 app.use(
   cors({
     origin: [

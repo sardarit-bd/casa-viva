@@ -11,6 +11,8 @@ export const envVars = {
     JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET,
     JWT_REFRESH_EXPIRES: process.env.JWT_REFRESH_EXPIRES,
 
-    DB_URL: process.env.DB_URL
+    DB_URL: process.env.DB_URL,
+
+    ENVAIRONMENT: process.env.ENVAIRONMENT
 
 }
