@@ -13,9 +13,11 @@ export const setAuthCookie = (res, tokenInfo) => {
 
     if (tokenInfo.refreshToken) {
         res.cookie('refreshToken', tokenInfo.refreshToken, {
-            httpOnly: true,
-            secure: true,
-            sameSite: "none"
+           httpOnly: true,
+            secure: envVars.ENVAIRONMENT === 'production', 
+            sameSite: envVars.ENVAIRONMENT === 'production' ? 'none' : 'lax',
+            maxAge: 24 * 60 * 60 * 1000, 
+            path: '/',
         })
     }
 }

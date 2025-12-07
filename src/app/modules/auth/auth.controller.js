@@ -59,8 +59,10 @@ const logout = catchAsync(
         });
         res.clearCookie("refreshToken", {
             httpOnly: true,
-            secure: false,
-            sameSite: "lax",
+            secure: envVars.ENVAIRONMENT === 'production', 
+            sameSite: envVars.ENVAIRONMENT === 'production' ? 'none' : 'lax',
+            maxAge: 24 * 60 * 60 * 1000, 
+            path: '/',
         });
         sendResponse(res, {
             success: true,
