@@ -6,6 +6,8 @@ import mongoose from "mongoose";
 import { envVars } from "./app/config/env.js";
 
 import cookieParser from "cookie-parser";
+import { globalErrorHandle } from "./app/middlewares/globalErrorHandler.js";
+import { notFound } from "./app/middlewares/notFound.js";
 
 
 const app = express();
@@ -27,7 +29,9 @@ app.get("/", (req, res) => {
   res.send("Server is running.");
 });
 
+app.use(globalErrorHandle);
 
+app.use(notFound);
 let server
 
 const startServer = async () => {
