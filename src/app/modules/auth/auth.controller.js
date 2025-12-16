@@ -74,9 +74,55 @@ const logout = catchAsync(
 );
 
 
+const changePassword = catchAsync(
+    async (req, res, next) => {
+        const decodedToken = req.user;
+        await AuthServices.changePassword(req.body, decodedToken)
+
+        sendResponse(res, {
+            success: true,
+            statusCode: httpStatus.OK,
+            message: "Password is changed Successfully!",
+            data: null
+        })
+
+    }
+);
+
+
+const forgotPassword = catchAsync(
+    async (req, res, next) => {
+        await AuthServices.forgotPassword(req.body)
+
+        sendResponse(res, {
+            success: true,
+            statusCode: httpStatus.OK,
+            message: "Password reset link is send to your email.",
+            data: null
+        })
+
+    }
+);
+
+const resetPassword = catchAsync(
+    async (req, res, next) => {
+        await AuthServices.resetPassword(req.body, req.user)
+
+        sendResponse(res, {
+            success: true,
+            statusCode: httpStatus.OK,
+            message: "Password reset is successull.",
+            data: null
+        })
+    }
+);
+
 export const AuthControllers = {
     credentialsLogin,
     logout,
     createUser,
-    getMe
+    getMe,
+    changePassword,
+    forgotPassword,
+    resetPassword
 };
