@@ -40,6 +40,16 @@ const getMe = async (userId) => {
 
   return user;
 };
+const deleteMe = async (userId) => {
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, "User Not Found");
+  }
+
+  await User.findByIdAndDelete(userId)
+  return true;
+};
+
 const credentialsLogin = async (payload) => {
   const { email, password } = payload;
 
@@ -118,9 +128,7 @@ export const forgotPassword = async (payload) => {
 
 
   const resetUrlLink = `${envVars.FRONTEND_URL}/reset-password?id=${user._id}&token=${resetToken}`;
-  console.log(resetUrlLink)
   await sendResetPasswordEmail(user.email, resetUrlLink);
-  console.log("done")
   return true
 }
 
@@ -148,5 +156,6 @@ export const AuthServices = {
   getMe,
   changePassword,
   resetPassword,
-  forgotPassword
+  forgotPassword,
+  deleteMe
 }

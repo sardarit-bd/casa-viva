@@ -34,6 +34,36 @@ const getMe = catchAsync(
     }
 );
 
+const deleteMe = catchAsync(
+    async (req, res, next) => {
+        const verifiedToken = req.user;
+
+        const user = await AuthServices.deleteMe(verifiedToken.userId);
+
+        res.clearCookie("accessToken", {
+            httpOnly: true,
+            secure: envVars.ENVAIRONMENT === 'production',
+            sameSite: envVars.ENVAIRONMENT === 'production' ? 'none' : 'lax',
+            maxAge: 24 * 60 * 60 * 1000,
+            path: '/',
+        });
+        res.clearCookie("refreshToken", {
+            httpOnly: true,
+            secure: envVars.ENVAIRONMENT === 'production',
+            sameSite: envVars.ENVAIRONMENT === 'production' ? 'none' : 'lax',
+            maxAge: 24 * 60 * 60 * 1000,
+            path: '/',
+        });
+
+        sendResponse(res, {
+            statusCode: httpStatus.OK,
+            success: true,
+            message: "User deleted Successfully",
+            data: user,
+        });
+    }
+);
+
 const credentialsLogin = catchAsync(
     async (req, res, next) => {
         const loginInfo = await AuthServices.credentialsLogin(req.body)
@@ -52,16 +82,16 @@ const logout = catchAsync(
     async (req, res, next) => {
         res.clearCookie("accessToken", {
             httpOnly: true,
-            secure: envVars.ENVAIRONMENT === 'production', 
+            secure: envVars.ENVAIRONMENT === 'production',
             sameSite: envVars.ENVAIRONMENT === 'production' ? 'none' : 'lax',
-            maxAge: 24 * 60 * 60 * 1000, 
+            maxAge: 24 * 60 * 60 * 1000,
             path: '/',
         });
         res.clearCookie("refreshToken", {
             httpOnly: true,
-            secure: envVars.ENVAIRONMENT === 'production', 
+            secure: envVars.ENVAIRONMENT === 'production',
             sameSite: envVars.ENVAIRONMENT === 'production' ? 'none' : 'lax',
-            maxAge: 24 * 60 * 60 * 1000, 
+            maxAge: 24 * 60 * 60 * 1000,
             path: '/',
         });
         sendResponse(res, {
@@ -124,5 +154,6 @@ export const AuthControllers = {
     getMe,
     changePassword,
     forgotPassword,
-    resetPassword
+    resetPassword,
+    deleteMe
 };
