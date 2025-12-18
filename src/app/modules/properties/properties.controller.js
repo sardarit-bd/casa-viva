@@ -2,31 +2,12 @@ import httpStatus from 'http-status-codes';
 
 import { catchAsync } from '../../utils/catchAsync.js';
 import { propertiesServices } from './property.service.js';
-import { deleteMultipleFromCloudinary, uploadMultipleToCloudinary } from '../../utils/cloudinary.js';
 import { pick } from '../../utils/pick.js';
 
 const createProperty = catchAsync(async (req, res) => {
-  // Upload images to Cloudinary
-  let uploadedImages = [];
-  if (req.uploadedFiles && req.uploadedFiles.length > 0) {
-    const uploadResults = await uploadMultipleToCloudinary(
-      req.uploadedFiles,
-      'properties'
-    );
-    
-    uploadedImages = uploadResults.map((result, index) => ({
-      url: result.secure_url,
-      publicId: result.public_id,
-      isCover: index === 0,
-      width: result.width,
-      height: result.height,
-      format: result.format
-    }));
-  }
 
   const propertyData = {
     ...req.body,
-    images: uploadedImages
   };
 
   const property = await propertiesServices.createProperty(
@@ -70,28 +51,10 @@ const getProperty = catchAsync(async (req, res) => {
 });
 
 const updateProperty = catchAsync(async (req, res) => {
-  let updatedImages = null;
-  
-  // If new images are uploaded
-  if (req.uploadedFiles && req.uploadedFiles.length > 0) {
-    const uploadResults = await uploadMultipleToCloudinary(
-      req.uploadedFiles,
-      'properties'
-    );
-    
-    updatedImages = uploadResults.map((result, index) => ({
-      url: result.secure_url,
-      publicId: result.public_id,
-      isCover: index === 0,
-      width: result.width,
-      height: result.height,
-      format: result.format
-    }));
-  }
 
+  
   const updateData = {
     ...req.body,
-    ...(updatedImages && { images: updatedImages })
   };
 
   const property = await propertiesServices.updateProperty(
@@ -115,14 +78,6 @@ const deleteProperty = catchAsync(async (req, res) => {
     req.user._id,
     permanent
   );
-
-  // If permanent delete and property had images, delete from Cloudinary
-  if (permanent && property.images && property.images.length > 0) {
-    const publicIds = property.images.map(img => img.publicId).filter(Boolean);
-    if (publicIds.length > 0) {
-      await deleteMultipleFromCloudinary(publicIds);
-    }
-  }
 
   res.status(httpStatus.OK).json({
     success: true,

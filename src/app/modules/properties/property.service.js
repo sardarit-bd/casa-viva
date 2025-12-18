@@ -1,6 +1,5 @@
 import httpStatus from 'http-status-codes';;
 import Property from './properties.model.js';
-import { deleteFromCloudinary, uploadToCloudinary } from '../../utils/cloudinary.js';
 import AppError from '../../errorHelpers/AppError.js';
 
 const createProperty = async (payload, userId) => {
@@ -21,25 +20,11 @@ const createProperty = async (payload, userId) => {
   }
 
   // Upload images to Cloudinary
-  let uploadedImages = [];
-  if (images && images.length > 0) {
-    const uploadPromises = images.map(async (image, index) => {
-      const result = await uploadToCloudinary(image, 'properties');
-      return {
-        url: result.secure_url,
-        publicId: result.public_id,
-        isCover: index === 0
-      };
-    });
-    
-    uploadedImages = await Promise.all(uploadPromises);
-  }
 
   // Create property
   const property = await Property.create({
     ...rest,
     owner: userId,
-    images: uploadedImages,
     status: 'active'
   });
 
@@ -162,29 +147,6 @@ const updateProperty = async (id, payload, userId) => {
 
   const { images, ...rest } = payload;
 
-  // Handle image updates
-  if (images && Array.isArray(images)) {
-    // Delete old images from Cloudinary
-    if (property.images && property.images.length > 0) {
-      const deletePromises = property.images.map(image => 
-        deleteFromCloudinary(image.publicId)
-      );
-      await Promise.all(deletePromises);
-    }
-
-    // Upload new images
-    const uploadPromises = images.map(async (image, index) => {
-      const result = await uploadToCloudinary(image, 'properties');
-      return {
-        url: result.secure_url,
-        publicId: result.public_id,
-        isCover: index === 0
-      };
-    });
-    
-    rest.images = await Promise.all(uploadPromises);
-  }
-
   Object.assign(property, rest);
   await property.save();
 
@@ -204,14 +166,7 @@ const deleteProperty = async (id, userId, permanent = false) => {
   }
 
   if (permanent) {
-    // Delete images from Cloudinary
-    if (property.images && property.images.length > 0) {
-      const deletePromises = property.images.map(image => 
-        deleteFromCloudinary(image.publicId)
-      );
-      await Promise.all(deletePromises);
-    }
-    
+ 
     await Property.findByIdAndDelete(id);
   } else {
     // Soft delete

@@ -1,6 +1,5 @@
 import express from 'express';
 import { propertiesControllers } from './properties.controller.js';
-import upload from '../../middlewares/upload.js';
 import { Role } from '../auth/auth.model.js';
 import { checkAuth } from '../../middlewares/checkAuth.js';
 ;
@@ -21,9 +20,6 @@ router.use(checkAuth(Role.OWNER, Role.AGENT, Role.ADMIN, Role.SUPER_ADMIN));
 // Owner/Agent routes
 router.post(
   '/',
-  upload.handleMultipleImageUpload('images', 10),
-  upload.validateImageDimensions(400, 300),
-  upload.optimizeImages({ width: 1200, height: 800, quality: 80 }),
   propertiesControllers.createProperty
 );
 
@@ -42,9 +38,6 @@ router.get(
 // Property management routes
 router.patch(
   '/:id',
-  upload.handleMultipleImageUpload('images', 10),
-  upload.validateImageDimensions(400, 300),
-  upload.optimizeImages({ width: 1200, height: 800, quality: 80 }),
   propertiesControllers.updateProperty
 );
 
