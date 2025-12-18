@@ -12,7 +12,7 @@ const createProperty = catchAsync(async (req, res) => {
 
   const property = await propertiesServices.createProperty(
     propertyData, 
-    req.user._id
+    req.user.userId
   );
 
   res.status(httpStatus.CREATED).json({
@@ -52,7 +52,6 @@ const getProperty = catchAsync(async (req, res) => {
 
 const updateProperty = catchAsync(async (req, res) => {
 
-  
   const updateData = {
     ...req.body,
   };
@@ -60,7 +59,7 @@ const updateProperty = catchAsync(async (req, res) => {
   const property = await propertiesServices.updateProperty(
     req.params.id, 
     updateData, 
-    req.user._id
+    req.user.userId
   );
 
   res.status(httpStatus.OK).json({
@@ -75,7 +74,7 @@ const deleteProperty = catchAsync(async (req, res) => {
   
   const property = await propertiesServices.deleteProperty(
     req.params.id, 
-    req.user._id,
+    req.user.userId,
     permanent
   );
 
@@ -93,9 +92,8 @@ const getMyProperties = catchAsync(async (req, res) => {
   ]);
   
   const paginationOptions = pick(req.query, ['page', 'limit', 'sortBy', 'sortOrder']);
-  
   const result = await propertiesServices.getMyProperties(
-    req.user._id, 
+    req.user.userId, 
     filter, 
     paginationOptions
   );
@@ -113,7 +111,7 @@ const toggleFeatured = catchAsync(async (req, res) => {
   
   const property = await propertiesServices.toggleFeatured(
     req.params.id,
-    req.user._id,
+    req.user.userId,
     featured
   );
 
@@ -129,7 +127,7 @@ const updateStatus = catchAsync(async (req, res) => {
   
   const property = await propertiesServices.updateStatus(
     req.params.id,
-    req.user._id,
+    req.user.userId,
     status
   );
 
@@ -141,7 +139,7 @@ const updateStatus = catchAsync(async (req, res) => {
 });
 
 const getPropertyStats = catchAsync(async (req, res) => {
-  const stats = await propertiesServices.getPropertyStats(req.user._id);
+  const stats = await propertiesServices.getPropertyStats(req.user.userId);
 
   res.status(httpStatus.OK).json({
     success: true,
@@ -158,7 +156,7 @@ const restoreProperty = catchAsync(async (req, res) => {
       deletedAt: null, 
       status: 'active' 
     },
-    req.user._id
+    req.user.userId
   );
 
   res.status(httpStatus.OK).json({
@@ -177,7 +175,7 @@ const getTrashedProperties = catchAsync(async (req, res) => {
   
   // Override filter to only show deleted properties
   filter.isDeleted = true;
-  filter.owner = req.user._id;
+  filter.owner = req.user.userId;
   
   const result = await propertiesServices.getAllProperties(filter, paginationOptions);
 

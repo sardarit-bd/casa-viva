@@ -1,6 +1,7 @@
 import httpStatus from 'http-status-codes';;
 import Property from './properties.model.js';
 import AppError from '../../errorHelpers/AppError.js';
+import mongoose from 'mongoose';
 
 const createProperty = async (payload, userId) => {
   const { images, ...rest } = payload;
@@ -32,10 +33,15 @@ const createProperty = async (payload, userId) => {
 };
 
 const getAllProperties = async (filters, paginationOptions) => {
-  const { search, city, type, listingType, minPrice, maxPrice, minBedrooms, featured, status, owner } = filters;
+  const { search, city, type, listingType, minPrice, maxPrice, minBedrooms, featured, status, owner, isDeleted } = filters;
+
   const { page, limit, sortBy, sortOrder } = paginationOptions;
 
   const query = { isDeleted: false };
+
+  if (isDeleted) {
+    query.isDeleted = true
+  }
 
   // Search by title or description
   if (search) {
@@ -101,6 +107,7 @@ const getAllProperties = async (filters, paginationOptions) => {
     sortConditions.createdAt = -1; // Default sort by newest
   }
 
+  console.log(query)
   const properties = await Property.find(query)
     .populate('owner', 'name email phone avatar')
     .sort(sortConditions)
@@ -145,9 +152,7 @@ const updateProperty = async (id, payload, userId) => {
     throw new AppError(httpStatus.FORBIDDEN, 'You are not authorized to update this property');
   }
 
-  const { images, ...rest } = payload;
-
-  Object.assign(property, rest);
+  Object.assign(property, payload);
   await property.save();
 
   return property;
@@ -166,7 +171,7 @@ const deleteProperty = async (id, userId, permanent = false) => {
   }
 
   if (permanent) {
- 
+
     await Property.findByIdAndDelete(id);
   } else {
     // Soft delete
@@ -199,7 +204,7 @@ const toggleFeatured = async (id, userId, featured) => {
   }
 
   property.featured = featured;
-  
+
   // Set expiration date for featured status (30 days from now)
   if (featured) {
     const expiresAt = new Date();
@@ -232,10 +237,11 @@ const updateStatus = async (id, userId, status) => {
 };
 
 const getPropertyStats = async (userId) => {
+
   const stats = await Property.aggregate([
     {
       $match: {
-        owner: userId,
+        owner: new mongoose.Types.ObjectId(userId),
         isDeleted: false
       }
     },

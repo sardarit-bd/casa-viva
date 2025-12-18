@@ -99,7 +99,7 @@ const propertySchema = new mongoose.Schema({
       required: true
     },
     publicId: {
-      type: String // For Cloudinary or similar service
+      type: String 
     },
     isCover: {
       type: Boolean,
@@ -229,9 +229,8 @@ propertySchema.index({ featured: 1, status: 1 });
 propertySchema.index({ location: '2dsphere' }); // For geospatial queries
 
 // Middleware to update updatedAt before save
-propertySchema.pre('save', function(next) {
+propertySchema.pre('save', function() {
   this.updatedAt = Date.now();
-  next();
 });
 
 // Static method to find active properties
