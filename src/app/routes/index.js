@@ -2,8 +2,7 @@ import { Router } from "express";
 import { AuthRoutes } from "../modules/auth/auth.route.js";
 import { PropertiesRoutes } from "../modules/properties/properties.route.js";
 import { UploadRoutes } from "../modules/upload/upload.routes.js";
-
-
+import { PaymentRoutes } from "../payments/payments.route.js";
 
 export const router = Router()
 
@@ -19,6 +18,10 @@ const moduleRoutes = [
     {
         path: '/upload',
         route: UploadRoutes
+    },
+    {
+        path: '/payment',
+        route: PaymentRoutes
     }
 ]
 

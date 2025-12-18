@@ -14,6 +14,12 @@ export const envVars = {
     DB_URL: process.env.DB_URL,
     FRONTEND_URL: process.env.FRONTEND_URL,
 
-    ENVAIRONMENT: process.env.ENVAIRONMENT
+    ENVAIRONMENT: process.env.ENVAIRONMENT,
+    PORT: process.env.PORT || 3000,
+    STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
+    STRIPE_SUCCESS_URL: process.env.STRIPE_SUCCESS_URL,
+    STRIPE_CANCEL_URL: process.env.STRIPE_CANCEL_URL,
+
+
 
 }
