@@ -3,7 +3,7 @@ import AppError from "../../errorHelpers/AppError.js";
 import httpStatus from 'http-status-codes'
 import bcryptjs from "bcryptjs";
 import { createUserTokens } from "../../utils/userTokens.js";
-import { User } from "./auth.model.js";
+import { Owner, Tenant, User } from "./auth.model.js";
 import { envVars } from "../../config/env.js";
 import { sendResetPasswordEmail } from "../../utils/sendEmail.js";
 import jwt from 'jsonwebtoken'
@@ -27,6 +27,16 @@ const createUser = async (payload) => {
     ...rest,
   });
 
+  if (user.role === 'tenant') {
+    await Tenant.create({
+      user: user._id
+    })
+  }
+  if (user.role === 'owner') {
+    await Owner.create({
+      user: user._id
+    })
+  }
   const userObj = user.toObject();
   delete userObj.password;
   return userObj;
@@ -84,7 +94,7 @@ export const changePassword = async (payload, decodedToken) => {
 
   const newPassword = payload.newPassword;
   const oldPassword = payload.currentPassword;
-  
+
   const user = await User.findById(decodedToken.userId);
 
   const isOldPasswordMatched = await bcryptjs.compare(
@@ -135,7 +145,7 @@ export const forgotPassword = async (payload) => {
 
 export const resetPassword = async (payload, decodedToken) => {
   const { password } = payload;
- 
+
   const user = await User.findById(decodedToken.userId);
 
   if (!user) {

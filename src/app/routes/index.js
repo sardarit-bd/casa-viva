@@ -4,6 +4,7 @@ import { PropertiesRoutes } from "../modules/properties/properties.route.js";
 import { UploadRoutes } from "../modules/upload/upload.routes.js";
 import { PaymentRoutes } from "../payments/payments.route.js";
 import { LeaseRoutes } from "../modules/lease/lease.routes.js";
+import { UsersRoutes } from "../modules/users/users.route.js";
 
 export const router = Router()
 
@@ -28,6 +29,10 @@ const moduleRoutes = [
         path: '/leases',
         route: LeaseRoutes,
     },
+    {
+        path: '/users',
+        route: UsersRoutes
+    }
 ]
 
 moduleRoutes.forEach(route => {
