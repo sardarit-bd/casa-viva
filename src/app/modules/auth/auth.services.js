@@ -83,8 +83,8 @@ const credentialsLogin = async (payload) => {
 export const changePassword = async (payload, decodedToken) => {
 
   const newPassword = payload.newPassword;
-  const oldPassword = payload.oldPassword;
-
+  const oldPassword = payload.currentPassword;
+  
   const user = await User.findById(decodedToken.userId);
 
   const isOldPasswordMatched = await bcryptjs.compare(
@@ -127,7 +127,7 @@ export const forgotPassword = async (payload) => {
   });
 
 
-  const resetUrlLink = `${envVars.FRONTEND_URL}/reset-password?id=${user._id}&token=${resetToken}`;
+  const resetUrlLink = `${envVars.FRONTEND_URL}/pages/reset-password?id=${user._id}&token=${resetToken}`;
   await sendResetPasswordEmail(user.email, resetUrlLink);
   return true
 }
