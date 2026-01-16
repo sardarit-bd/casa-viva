@@ -4,7 +4,6 @@ const leaseSchema = new mongoose.Schema({
   // Basic Information
   title: {
     type: String,
-    required: true,
     trim: true
   },
   
@@ -35,18 +34,15 @@ const leaseSchema = new mongoose.Schema({
   
   // Lease Terms
   startDate: {
-    type: Date,
-    required: true
+    type: Date
   },
   
   endDate: {
-    type: Date,
-    required: true
+    type: Date
   },
   
   rentAmount: {
     type: Number,
-    required: true,
     min: 0
   },
   

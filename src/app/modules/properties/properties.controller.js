@@ -10,7 +10,6 @@ const createProperty = catchAsync(async (req, res) => {
     ...req.body,
   };
 
-  console.log('Creating property with data:', propertyData);
 
   const property = await propertiesServices.createProperty(
     propertyData, 
