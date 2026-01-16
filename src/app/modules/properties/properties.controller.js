@@ -10,6 +10,7 @@ const createProperty = catchAsync(async (req, res) => {
     ...req.body,
   };
 
+
   const property = await propertiesServices.createProperty(
     propertyData, 
     req.user.userId

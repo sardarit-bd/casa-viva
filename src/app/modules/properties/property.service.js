@@ -4,11 +4,10 @@ import AppError from '../../errorHelpers/AppError.js';
 import mongoose from 'mongoose';
 
 const createProperty = async (payload, userId) => {
-  const { images, ...rest } = payload;
 
   // Check if property with same title exists for this owner
   const existingProperty = await Property.findOne({
-    title: rest.title,
+    title: payload.title,
     owner: userId,
     isDeleted: false
   });
@@ -20,11 +19,9 @@ const createProperty = async (payload, userId) => {
     );
   }
 
-  // Upload images to Cloudinary
-
   // Create property
   const property = await Property.create({
-    ...rest,
+    ...payload,
     owner: userId,
     status: 'active'
   });
