@@ -2,11 +2,28 @@ import express from 'express';
 import { propertiesControllers } from './properties.controller.js';
 import { Role } from '../auth/auth.model.js';
 import { checkAuth } from '../../middlewares/checkAuth.js';
+import mongoose from 'mongoose';
+import Property from './properties.model.js';
 ;
 
 const router = express.Router();
 
 // Public routes
+router.post("/fetchByIds", async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids)) {
+      return res.status(400).json({ error: "Invalid IDs" });
+    }
+    // Convert string IDs to ObjectId
+    const objectIds = ids.map(id => new mongoose.Types.ObjectId(id));
+    const fav = await Property.find({ _id: { $in: objectIds } });
+    res.json(fav);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
 router.get(
   '/',
   propertiesControllers.getAllProperties
