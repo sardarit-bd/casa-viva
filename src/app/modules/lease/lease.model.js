@@ -6,65 +6,74 @@ const leaseSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
-  
+
   description: {
     type: String,
     trim: true
   },
-  
+
   // Parties Information
   landlord: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
   },
-  
+
   tenant: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
   },
-  
+
   // Property Information
   property: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Property',
     required: true
   },
-  
+
   // Lease Terms
   startDate: {
     type: Date
   },
-  
+
   endDate: {
     type: Date
   },
-  
+
   rentAmount: {
     type: Number,
     min: 0
   },
-  
+
   rentFrequency: {
     type: String,
     enum: ['monthly', 'weekly', 'biweekly', 'quarterly', 'yearly'],
     default: 'monthly'
   },
-  
+
   securityDeposit: {
     type: Number,
     default: 0,
     min: 0
   },
-  
-  // Status Management
+
   status: {
     type: String,
-    enum: ['draft', 'sent_to_tenant', 'changes_requested', 'signed_by_landlord', 'signed_by_tenant', 'fully_executed', 'cancelled', 'expired'],
-    default: 'draft'
+    enum: [
+      'pending_request',
+      'draft',
+      'sent_to_tenant',
+      'changes_requested',
+      'signed_by_landlord',
+      'signed_by_tenant',
+      'fully_executed',
+      'cancelled',
+      'expired'
+    ],
+    default: 'pending_request'
   },
-  
+
   statusHistory: [{
     status: String,
     changedBy: {
@@ -77,7 +86,7 @@ const leaseSchema = new mongoose.Schema({
       default: Date.now
     }
   }],
-  
+
   // E-Signature Information
   signatures: {
     landlord: {
@@ -97,19 +106,19 @@ const leaseSchema = new mongoose.Schema({
       verificationToken: String
     }
   },
-  
+
   // Document Information
   finalDocument: {
     type: String // URL or file path
   },
-  
+
   // Terms and Conditions
   terms: {
     type: mongoose.Schema.Types.Mixed,
     default: {}
   },
-  
-  
+
+
   // Communication
   messages: [{
     from: {
@@ -127,7 +136,7 @@ const leaseSchema = new mongoose.Schema({
       default: Date.now
     }
   }],
-  
+
   // Changes Requested
   requestedChanges: [{
     requestedBy: {
@@ -145,38 +154,38 @@ const leaseSchema = new mongoose.Schema({
     },
     resolvedAt: Date,
   }],
-  
+
   // Audit Trail
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
   },
-  
+
   // Lock after signing
   isLocked: {
     type: Boolean,
     default: false
   },
-  
+
   lockedAt: Date,
-  
+
   // Expiration tracking
   expiresAt: Date,
-  
+
   // Timestamps
   createdAt: {
     type: Date,
     default: Date.now
   },
-  
+
   updatedAt: {
     type: Date,
     default: Date.now
   },
-  
+
   deletedAt: Date,
-  
+
   isDeleted: {
     type: Boolean,
     default: false
@@ -198,36 +207,36 @@ leaseSchema.index({ 'signatures.landlord.verificationToken': 1 });
 leaseSchema.index({ 'signatures.tenant.verificationToken': 1 });
 
 // Virtuals
-leaseSchema.virtual('duration').get(function() {
+leaseSchema.virtual('duration').get(function () {
   const diffTime = Math.abs(this.endDate - this.startDate);
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   return diffDays;
 });
 
-leaseSchema.virtual('isActive').get(function() {
-  return this.status === 'fully_executed' && 
-         new Date() >= this.startDate && 
-         new Date() <= this.endDate;
+leaseSchema.virtual('isActive').get(function () {
+  return this.status === 'fully_executed' &&
+    new Date() >= this.startDate &&
+    new Date() <= this.endDate;
 });
 
-leaseSchema.virtual('isExpired').get(function() {
+leaseSchema.virtual('isExpired').get(function () {
   return this.status === 'fully_executed' && new Date() > this.endDate;
 });
 
-leaseSchema.virtual('isSignedByLandlord').get(function() {
+leaseSchema.virtual('isSignedByLandlord').get(function () {
   return !!this.signatures.landlord?.signedAt;
 });
 
-leaseSchema.virtual('isSignedByTenant').get(function() {
+leaseSchema.virtual('isSignedByTenant').get(function () {
   return !!this.signatures.tenant?.signedAt;
 });
 
-leaseSchema.virtual('isFullySigned').get(function() {
+leaseSchema.virtual('isFullySigned').get(function () {
   return !!this.signatures.landlord?.signedAt && !!this.signatures.tenant?.signedAt;
 });
 
-leaseSchema.virtual('nextAction').get(function() {
-  switch(this.status) {
+leaseSchema.virtual('nextAction').get(function () {
+  switch (this.status) {
     case 'draft':
       return { by: 'landlord', action: 'send_to_tenant' };
     case 'sent_to_tenant':
@@ -244,7 +253,7 @@ leaseSchema.virtual('nextAction').get(function() {
 });
 
 // Middleware to update status history
-leaseSchema.pre('save', function() {
+leaseSchema.pre('save', function () {
   if (this.isModified('status')) {
     this.statusHistory.push({
       status: this.status,
@@ -252,25 +261,25 @@ leaseSchema.pre('save', function() {
       changedAt: new Date()
     });
   }
-  
+
   // Auto-lock when fully executed
   if (this.status === 'fully_executed' && !this.isLocked) {
     this.isLocked = true;
     this.lockedAt = new Date();
   }
-  
+
   // Auto-expire when end date passed
   if (this.status === 'fully_executed' && new Date() > this.endDate) {
     this.status = 'expired';
   }
-  
+
   // Set expiresAt for signature (30 days from creation)
   if (!this.expiresAt && this.status !== 'fully_executed') {
     const expires = new Date();
     expires.setDate(expires.getDate() + 30);
     this.expiresAt = expires;
   }
-  
+
 });
 
 const Lease = mongoose.models.Lease || mongoose.model('Lease', leaseSchema);

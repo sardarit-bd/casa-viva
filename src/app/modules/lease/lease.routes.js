@@ -11,6 +11,7 @@ import {
     getLeaseStats,
     deleteLease,
     restoreLease,
+    approveRequest,
 } from './lease.controller.js'
 import { checkAuth } from '../../middlewares/checkAuth.js';
 import { Role } from '../auth/auth.model.js';
@@ -63,6 +64,11 @@ router.post(
     signLease
 );
 
+router.post(
+  '/:leaseId/approve',
+  checkAuth(Role.OWNER),
+  approveRequest
+);
 
 // Cancel lease
 router.post(
