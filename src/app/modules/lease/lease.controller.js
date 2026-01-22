@@ -5,6 +5,8 @@ import { User } from "../auth/auth.model.js";
 import Property from "../properties/properties.model.js";
 import Lease from "./lease.model.js";
 import httpStatus from "http-status-codes";
+import { uploadServices } from "../upload/upload.services.js";
+import { base64ToBuffer } from "../../utils/base64ToBuffer.js";
 
 // Create new lease
 const createLease = catchAsync(async (req, res) => {
@@ -14,7 +16,7 @@ const createLease = catchAsync(async (req, res) => {
   // Find property
   const property = await Property.findOne({
     _id: propertyId,
-    isDeleted: false
+    isDeleted: false,
   });
 
   if (!property) {
@@ -38,7 +40,7 @@ const createLease = catchAsync(async (req, res) => {
     property: propertyId,
     tenant: tenantId,
     status: { $nin: ["cancelled", "expired"] },
-    isDeleted: false
+    isDeleted: false,
   });
 
   if (existing) {
@@ -59,19 +61,17 @@ const createLease = catchAsync(async (req, res) => {
       {
         status: "pending_request",
         changedBy: tenantId,
-        reason: "Tenant requested to rent"
-      }
-    ]
+        reason: "Tenant requested to rent",
+      },
+    ],
   });
 
   res.status(201).json({
     success: true,
     message: "Request sent to landlord",
-    data: lease
+    data: lease,
   });
 });
-
-
 
 // Send lease to tenant
 const sendToTenant = catchAsync(async (req, res) => {
@@ -84,13 +84,13 @@ const sendToTenant = catchAsync(async (req, res) => {
     _id: leaseId,
     landlord: landlordId,
     status: "draft",
-    isDeleted: false
+    isDeleted: false,
   });
 
   if (!lease) {
     throw new AppError(
       httpStatus.NOT_FOUND,
-      "Lease not found or you are not authorized to send it"
+      "Lease not found or you are not authorized to send it",
     );
   }
 
@@ -98,14 +98,14 @@ const sendToTenant = catchAsync(async (req, res) => {
   if (!lease.startDate || !lease.endDate) {
     throw new AppError(
       httpStatus.BAD_REQUEST,
-      "Lease start and end dates must be set before sending"
+      "Lease start and end dates must be set before sending",
     );
   }
 
   if (!lease.rentAmount || lease.rentAmount <= 0) {
     throw new AppError(
       httpStatus.BAD_REQUEST,
-      "Valid rent amount must be set before sending"
+      "Valid rent amount must be set before sending",
     );
   }
 
@@ -118,7 +118,7 @@ const sendToTenant = catchAsync(async (req, res) => {
     lease.messages.push({
       from: landlordId,
       message: message.trim(),
-      sentAt: new Date()
+      sentAt: new Date(),
     });
   }
 
@@ -134,7 +134,7 @@ const sendToTenant = catchAsync(async (req, res) => {
   res.status(httpStatus.OK).json({
     success: true,
     message: "Lease sent to tenant successfully",
-    data: lease
+    data: lease,
   });
 });
 
@@ -145,48 +145,45 @@ const requestChanges = catchAsync(async (req, res) => {
 
   const lease = await Lease.findOne({
     _id: leaseId,
-    $or: [
-      { landlord: req.user.userId },
-      { tenant: req.user.userId }
-    ]
+    $or: [{ landlord: req.user.userId }, { tenant: req.user.userId }],
   });
 
   if (!lease) {
-    throw new AppError(httpStatus.NOT_FOUND, 'Lease not found');
+    throw new AppError(httpStatus.NOT_FOUND, "Lease not found");
   }
 
   // Check if user can request changes
   if (
-    lease.status !== 'sent_to_tenant' ||
+    lease.status !== "sent_to_tenant" ||
     req.user.userId.toString() !== lease.tenant.toString()
   ) {
-    throw new AppError(400, 'Only tenant can request changes');
+    throw new AppError(400, "Only tenant can request changes");
   }
 
-
   // Update status
-  lease.status = 'changes_requested';
+  lease.status = "changes_requested";
 
   // Add change request
   lease.requestedChanges.push({
     requestedBy: req.user.userId,
     changes,
-    requestedAt: new Date()
+    requestedAt: new Date(),
   });
 
   // Add message
   lease.messages.push({
     from: req.user.userId,
     message: `Requested changes: ${changes}`,
-    sentAt: new Date()
+    sentAt: new Date(),
   });
 
   await lease.save();
 
   // Notify other party
-  const otherPartyId = req.user.userId.toString() === lease.landlord.toString()
-    ? lease.tenant
-    : lease.landlord;
+  const otherPartyId =
+    req.user.userId.toString() === lease.landlord.toString()
+      ? lease.tenant
+      : lease.landlord;
 
   const otherUser = await User.findById(otherPartyId);
   if (otherUser) {
@@ -195,8 +192,8 @@ const requestChanges = catchAsync(async (req, res) => {
 
   res.status(200).json({
     success: true,
-    message: 'Changes requested successfully',
-    data: lease
+    message: "Changes requested successfully",
+    data: lease,
   });
 });
 
@@ -209,53 +206,55 @@ const updateLease = catchAsync(async (req, res) => {
   const lease = await Lease.findOne({
     _id: leaseId,
     landlord: landlordId,
-    status: { $in: ['draft', 'changes_requested'] },
-    isDeleted: false
+    status: { $in: ["draft", "changes_requested"] },
+    isDeleted: false,
   });
 
   if (!lease) {
     throw new AppError(
       httpStatus.NOT_FOUND,
-      'Lease not found or unauthorized to edit'
+      "Lease not found or unauthorized to edit",
     );
   }
 
   const allowedUpdates = [
-    'title',
-    'description',
-    'startDate',
-    'endDate',
-    'rentAmount',
-    'rentFrequency',
-    'securityDeposit',
-    'terms',
-    'customClauses'
+    "title",
+    "description",
+    "startDate",
+    "endDate",
+    "rentAmount",
+    "rentFrequency",
+    "securityDeposit",
+    "utilities",
+    "maintenanceTerms",
+    "terms",
+    "customClauses",
   ];
 
   // Update allowed fields
-  allowedUpdates.forEach(field => {
+  allowedUpdates.forEach((field) => {
     if (updates[field] !== undefined) {
       lease[field] = updates[field];
     }
   });
 
   // Handle change request resolution
-  if (lease.status === 'changes_requested') {
-    lease.requestedChanges.forEach(rc => {
+  if (lease.status === "changes_requested") {
+    lease.requestedChanges.forEach((rc) => {
       if (!rc.resolved) {
         rc.resolved = true;
         rc.resolvedAt = new Date();
-        rc.resolutionNotes = updates.resolutionNotes || 'Resolved by landlord';
+        rc.resolutionNotes = updates.resolutionNotes || "Resolved by landlord";
       }
     });
 
-    lease.status = 'draft';
+    lease.status = "draft";
     lease._updatedBy = landlordId;
 
     lease.statusHistory.push({
-      status: 'draft',
+      status: "draft",
       changedBy: landlordId,
-      reason: 'Tenant requested changes resolved by landlord'
+      reason: "Tenant requested changes resolved by landlord",
     });
   }
 
@@ -264,119 +263,114 @@ const updateLease = catchAsync(async (req, res) => {
     from: landlordId,
     message:
       updates.message ||
-      (lease.status === 'draft'
-        ? 'Lease updated after tenant requested changes'
-        : 'Lease updated'),
-    sentAt: new Date()
+      (lease.status === "draft"
+        ? "Lease updated after tenant requested changes"
+        : "Lease updated"),
+    sentAt: new Date(),
   });
 
   await lease.save();
 
-  console.log('Lease updated successfully:', {
+  console.log("Lease updated successfully:", {
     leaseId: lease._id,
     rentAmount: lease.rentAmount,
     securityDeposit: lease.securityDeposit,
     startDate: lease.startDate,
-    endDate: lease.endDate
+    endDate: lease.endDate,
   });
 
   res.status(httpStatus.OK).json({
     success: true,
-    message: 'Lease updated successfully',
-    data: lease
+    message: "Lease updated successfully",
+    data: lease,
   });
 });
-
 
 // Sign lease with simple signature
 const signLease = catchAsync(async (req, res) => {
   const { leaseId } = req.params;
-  const { singnatureImageUrl } = req.body;
+  const { signatureDataUrl, signatureMode, typedSignature } = req.body;
   const userId = req.user.userId;
 
-  // Find lease
-  const lease = await Lease.findOne({
-    _id: leaseId,
-    isDeleted: false
-  });
+  if (!signatureDataUrl || !signatureMode) {
+    throw new AppError(400, "Signature data is required");
+  }
+
+  const lease = await Lease.findOne({ _id: leaseId, isDeleted: false });
 
   if (!lease) {
-    throw new AppError(httpStatus.NOT_FOUND, "Lease not found");
+    throw new AppError(404, "Lease not found");
   }
 
-  // Check if lease already locked
   if (lease.isLocked) {
-    throw new AppError(httpStatus.BAD_REQUEST, "Lease is already finalized");
+    throw new AppError(400, "Lease already finalized");
   }
 
-  // Identify role
   const isLandlord = lease.landlord.toString() === userId;
   const isTenant = lease.tenant.toString() === userId;
 
   if (!isLandlord && !isTenant) {
-    throw new AppError(httpStatus.FORBIDDEN, "You are not authorized to sign this lease");
+    throw new AppError(403, "Unauthorized");
   }
 
   const role = isLandlord ? "landlord" : "tenant";
 
-  // Status validation (must be sent_to_tenant or signed_by_landlord)
-  if (!["sent_to_tenant", "signed_by_landlord"].includes(lease.status)) {
-    throw new AppError(
-      httpStatus.BAD_REQUEST,
-      "Lease is not ready for signing"
-    );
-  }
-
-  // Signing order enforcement
+  // signing order
   if (role === "tenant" && !lease.signatures.landlord?.signedAt) {
-    throw new AppError(
-      httpStatus.BAD_REQUEST,
-      "Landlord must sign before tenant"
-    );
+    throw new AppError(400, "Landlord must sign first");
   }
 
-  // Prevent double signing
   if (lease.signatures?.[role]?.signedAt) {
-    throw new AppError(httpStatus.BAD_REQUEST, "You have already signed this lease");
+    throw new AppError(400, "Already signed");
   }
 
-  // Save signature
+  // ================= BASE64 → BUFFER =================
+  const signatureBuffer = base64ToBuffer(signatureDataUrl);
+
+  // ================= CLOUDINARY UPLOAD =================
+  const uploadResult = await uploadServices.uploadSingleFile(
+    signatureBuffer,
+    `leases/${leaseId}/signatures`,
+    "image",
+  );
+
+  // ================= SAVE SIGNATURE =================
   lease.signatures[role] = {
     signedAt: new Date(),
+    signatureType: signatureMode,
+    signatureData: {
+      dataUrl: uploadResult.url,
+      typedText: signatureMode === "type" ? typedSignature : undefined,
+    },
     ipAddress: req.ip,
     userAgent: req.headers["user-agent"],
-    singnatureImageUrl
   };
 
-  // Update status correctly
+  // ================= STATUS =================
   if (role === "landlord") {
     lease.status = "signed_by_landlord";
-  } else if (lease.signatures.landlord?.signedAt) {
+  } else {
     lease.status = "fully_executed";
   }
 
-  // Add message
   lease.messages.push({
     from: userId,
     message: `${role} signed the lease`,
-    sentAt: new Date()
+    sentAt: new Date(),
   });
 
   await lease.save();
 
-  res.status(httpStatus.OK).json({
+  res.status(200).json({
     success: true,
     message: "Lease signed successfully",
     data: {
-      leaseId: lease._id,
       status: lease.status,
       isFullySigned: lease.isFullySigned,
-      nextAction: lease.nextAction
-    }
+      signatureUrl: uploadResult.url,
+    },
   });
 });
-
-
 
 // Get leases for current user
 const getMyLeases = catchAsync(async (req, res) => {
@@ -384,36 +378,33 @@ const getMyLeases = catchAsync(async (req, res) => {
   const userId = req.user.userId;
 
   let query = {
-    $or: [
-      { landlord: userId },
-      { tenant: userId }
-    ],
-    isDeleted: false
+    $or: [{ landlord: userId }, { tenant: userId }],
+    isDeleted: false,
   };
 
   // Filter by role if specified
-  if (role === 'landlord') {
+  if (role === "landlord") {
     query = { landlord: userId, isDeleted: false };
-  } else if (role === 'tenant') {
+  } else if (role === "tenant") {
     query = { tenant: userId, isDeleted: false };
   }
 
   // Filter by status if specified
-  if (status && status !== 'all') {
+  if (status && status !== "all") {
     query.status = status;
   }
 
   const leases = await Lease.find(query)
-    .populate('property', 'title address city type price')
-    .populate('landlord', 'name email')
-    .populate('tenant', 'name email')
+    .populate("property", "title address city type price")
+    .populate("landlord", "name email")
+    .populate("tenant", "name email")
     .sort({ createdAt: -1 });
 
   res.status(200).json({
     success: true,
-    message: 'Leases retrieved successfully',
+    message: "Leases retrieved successfully",
     data: leases,
-    count: leases.length
+    count: leases.length,
   });
 });
 
@@ -423,38 +414,41 @@ const getLeaseById = catchAsync(async (req, res) => {
 
   // Validate leaseId format
   if (!mongoose.Types.ObjectId.isValid(leaseId)) {
-    throw new AppError(httpStatus.BAD_REQUEST, 'Invalid lease ID format');
+    throw new AppError(httpStatus.BAD_REQUEST, "Invalid lease ID format");
   }
 
   try {
     const lease = await Lease.findOne({
       _id: leaseId,
-      $or: [
-        { landlord: req.user.userId },
-        { tenant: req.user.userId }
-      ],
-      isDeleted: false
+      $or: [{ landlord: req.user.userId }, { tenant: req.user.userId }],
+      isDeleted: false,
     })
-      .populate('property', 'title address city state zipCode type amenities price')
-      .populate('landlord', 'name email phone profilePicture')
-      .populate('tenant', 'name email phone profilePicture')
-      .populate('createdBy', 'name email')
-      .populate('statusHistory.changedBy', 'name email')
-      .populate('messages.from', 'name email profilePicture')
-      .populate('requestedChanges.requestedBy', 'name email');
+      .populate(
+        "property",
+        "title address city state zipCode type amenities price",
+      )
+      .populate("landlord", "name email phone profilePicture")
+      .populate("tenant", "name email phone profilePicture")
+      .populate("createdBy", "name email")
+      .populate("statusHistory.changedBy", "name email")
+      .populate("messages.from", "name email profilePicture")
+      .populate("requestedChanges.requestedBy", "name email");
 
     if (!lease) {
-      console.log('Lease not found or unauthorized access attempt');
-      throw new AppError(httpStatus.NOT_FOUND, 'Lease not found or you are not authorized to view this lease');
+      console.log("Lease not found or unauthorized access attempt");
+      throw new AppError(
+        httpStatus.NOT_FOUND,
+        "Lease not found or you are not authorized to view this lease",
+      );
     }
 
     res.status(200).json({
       success: true,
-      message: 'Lease retrieved successfully',
-      data: lease
+      message: "Lease retrieved successfully",
+      data: lease,
     });
   } catch (error) {
-    console.error('Error in getLeaseById:', error);
+    console.error("Error in getLeaseById:", error);
     throw error;
   }
 });
@@ -466,34 +460,35 @@ const cancelLease = catchAsync(async (req, res) => {
 
   const lease = await Lease.findOne({
     _id: leaseId,
-    $or: [
-      { landlord: req.user.userId },
-      { tenant: req.user.userId }
-    ],
-    status: { $nin: ['fully_executed', 'cancelled', 'expired'] },
-    isDeleted: false
+    $or: [{ landlord: req.user.userId }, { tenant: req.user.userId }],
+    status: { $nin: ["fully_executed", "cancelled", "expired"] },
+    isDeleted: false,
   });
 
   if (!lease) {
-    throw new AppError(httpStatus.NOT_FOUND, 'Lease not found or cannot be cancelled');
+    throw new AppError(
+      httpStatus.NOT_FOUND,
+      "Lease not found or cannot be cancelled",
+    );
   }
 
   // Update status
-  lease.status = 'cancelled';
+  lease.status = "cancelled";
 
   // Add message
   lease.messages.push({
     from: req.user.userId,
-    message: `Lease cancelled. Reason: ${reason || 'No reason provided'}`,
-    sentAt: new Date()
+    message: `Lease cancelled. Reason: ${reason || "No reason provided"}`,
+    sentAt: new Date(),
   });
 
   await lease.save();
 
   // Notify other party
-  const otherPartyId = req.user.userId.toString() === lease.landlord.toString()
-    ? lease.tenant
-    : lease.landlord;
+  const otherPartyId =
+    req.user.userId.toString() === lease.landlord.toString()
+      ? lease.tenant
+      : lease.landlord;
 
   const otherUser = await User.findById(otherPartyId);
   if (otherUser) {
@@ -502,11 +497,10 @@ const cancelLease = catchAsync(async (req, res) => {
 
   res.status(200).json({
     success: true,
-    message: 'Lease cancelled successfully',
-    data: lease
+    message: "Lease cancelled successfully",
+    data: lease,
   });
 });
-
 
 // Get lease statistics
 const getLeaseStats = catchAsync(async (req, res) => {
@@ -517,71 +511,64 @@ const getLeaseStats = catchAsync(async (req, res) => {
   const stats = await Lease.aggregate([
     {
       $match: {
-        $or: [
-          { landlord: objectUserId },
-          { tenant: objectUserId }
-        ],
-        isDeleted: false
-      }
+        $or: [{ landlord: objectUserId }, { tenant: objectUserId }],
+        isDeleted: false,
+      },
     },
     {
       $group: {
-        _id: '$status',
+        _id: "$status",
         count: { $sum: 1 },
-        totalRent: { $sum: '$rentAmount' }
-      }
+        totalRent: { $sum: "$rentAmount" },
+      },
     },
     {
       $project: {
-        status: '$_id',
+        status: "$_id",
         count: 1,
         totalRent: 1,
-        _id: 0
-      }
-    }
+        _id: 0,
+      },
+    },
   ]);
 
   const asLandlord = await Lease.countDocuments({
     landlord: userId,
-    isDeleted: false
+    isDeleted: false,
   });
 
   const asTenant = await Lease.countDocuments({
     tenant: userId,
-    isDeleted: false
+    isDeleted: false,
   });
 
   const thirtyDaysFromNow = new Date();
   thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
 
   const expiringSoon = await Lease.countDocuments({
-    $or: [
-      { landlord: userId },
-      { tenant: userId }
-    ],
-    status: 'fully_executed',
+    $or: [{ landlord: userId }, { tenant: userId }],
+    status: "fully_executed",
     endDate: {
       $gte: new Date(),
-      $lte: thirtyDaysFromNow
+      $lte: thirtyDaysFromNow,
     },
-    isDeleted: false
+    isDeleted: false,
   });
 
   res.status(200).json({
     success: true,
-    message: 'Statistics retrieved successfully',
+    message: "Statistics retrieved successfully",
     data: {
       byStatus: stats,
       counts: {
         total: asLandlord + asTenant,
         asLandlord,
-        asTenant
+        asTenant,
       },
-      expiringSoon
-    }
+      expiringSoon,
+    },
   });
 });
-
 
 // Soft delete lease (archive)
 const deleteLease = catchAsync(async (req, res) => {
@@ -589,15 +576,15 @@ const deleteLease = catchAsync(async (req, res) => {
 
   const lease = await Lease.findOne({
     _id: leaseId,
-    $or: [
-      { landlord: req.user.userId },
-      { tenant: req.user.userId }
-    ],
-    status: { $in: ['draft', 'cancelled', 'expired'] }
+    $or: [{ landlord: req.user.userId }, { tenant: req.user.userId }],
+    status: { $in: ["draft", "cancelled", "expired"] },
   });
 
   if (!lease) {
-    throw new AppError(httpStatus.NOT_FOUND, 'Lease not found or cannot be deleted');
+    throw new AppError(
+      httpStatus.NOT_FOUND,
+      "Lease not found or cannot be deleted",
+    );
   }
 
   lease.isDeleted = true;
@@ -607,8 +594,8 @@ const deleteLease = catchAsync(async (req, res) => {
 
   res.status(200).json({
     success: true,
-    message: 'Lease deleted successfully',
-    data: { leaseId, deletedAt: new Date() }
+    message: "Lease deleted successfully",
+    data: { leaseId, deletedAt: new Date() },
   });
 });
 
@@ -618,15 +605,12 @@ const restoreLease = catchAsync(async (req, res) => {
 
   const lease = await Lease.findOne({
     _id: leaseId,
-    $or: [
-      { landlord: req.user.userId },
-      { tenant: req.user.userId }
-    ],
-    isDeleted: true
+    $or: [{ landlord: req.user.userId }, { tenant: req.user.userId }],
+    isDeleted: true,
   });
 
   if (!lease) {
-    throw new AppError(httpStatus.NOT_FOUND, 'Deleted lease not found');
+    throw new AppError(httpStatus.NOT_FOUND, "Deleted lease not found");
   }
 
   lease.isDeleted = false;
@@ -636,50 +620,50 @@ const restoreLease = catchAsync(async (req, res) => {
 
   res.status(200).json({
     success: true,
-    message: 'Lease restored successfully',
-    data: lease
+    message: "Lease restored successfully",
+    data: lease,
   });
 });
-
 
 const approveRequest = catchAsync(async (req, res) => {
   const lease = await Lease.findOne({
     _id: req.params.leaseId,
     landlord: req.user.userId,
-    status: 'pending_request',
-    isDeleted: false
-  }).populate('property');
+    status: "pending_request",
+    isDeleted: false,
+  }).populate("property");
 
   if (!lease) {
-    throw new AppError(404, 'Request not found');
+    throw new AppError(404, "Request not found");
   }
 
-  lease.status = 'draft';
+  lease.status = "draft";
   lease._updatedBy = req.user.userId;
 
   if (!lease.rentAmount && lease.property?.price) {
     lease.rentAmount = lease.property.price;
-    console.log('Setting rentAmount from property.price:', lease.property.price);
+    console.log(
+      "Setting rentAmount from property.price:",
+      lease.property.price,
+    );
   }
 
   lease.statusHistory.push({
-    status: 'draft',
+    status: "draft",
     changedBy: req.user.userId,
-    reason: 'Owner approved request'
+    reason: "Owner approved request",
   });
 
   await lease.save();
 
-  console.log('After save - rentAmount:', lease.rentAmount);
+  console.log("After save - rentAmount:", lease.rentAmount);
 
   res.json({
     success: true,
-    message: 'Request approved. Lease draft created',
-    data: lease
+    message: "Request approved. Lease draft created",
+    data: lease,
   });
 });
-
-
 
 export {
   createLease,
@@ -693,5 +677,5 @@ export {
   getLeaseStats,
   deleteLease,
   restoreLease,
-  approveRequest
+  approveRequest,
 };

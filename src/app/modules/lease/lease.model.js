@@ -1,286 +1,318 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
-const leaseSchema = new mongoose.Schema({
-  // Basic Information
-  title: {
-    type: String,
-    trim: true
-  },
-
-  description: {
-    type: String,
-    trim: true
-  },
-
-  // Parties Information
-  landlord: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-
-  tenant: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-
-  // Property Information
-  property: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Property',
-    required: true
-  },
-
-  // Lease Terms
-  startDate: {
-    type: Date
-  },
-
-  endDate: {
-    type: Date
-  },
-
-  rentAmount: {
-    type: Number,
-    min: 0
-  },
-
-  rentFrequency: {
-    type: String,
-    enum: ['monthly', 'weekly', 'biweekly', 'quarterly', 'yearly'],
-    default: 'monthly'
-  },
-
-  securityDeposit: {
-    type: Number,
-    default: 0,
-    min: 0
-  },
-
-  status: {
-    type: String,
-    enum: [
-      'pending_request',
-      'draft',
-      'sent_to_tenant',
-      'changes_requested',
-      'signed_by_landlord',
-      'signed_by_tenant',
-      'fully_executed',
-      'cancelled',
-      'expired'
-    ],
-    default: 'pending_request'
-  },
-
-  statusHistory: [{
-    status: String,
-    changedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
+const leaseSchema = new mongoose.Schema(
+  {
+    // ================= BASIC INFORMATION =================
+    title: {
+      type: String,
+      trim: true,
     },
-    reason: String,
-    changedAt: {
-      type: Date,
-      default: Date.now
-    }
-  }],
 
-  // E-Signature Information
-  signatures: {
+    description: {
+      type: String,
+      trim: true,
+    },
+
+    // ================= PARTIES =================
     landlord: {
-      signedAt: Date,
-      signatureType: String,
-      signatureData: mongoose.Schema.Types.Mixed,
-      ipAddress: String,
-      userAgent: String,
-      verificationToken: String
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
     },
+
     tenant: {
-      signedAt: Date,
-      signatureType: String,
-      signatureData: mongoose.Schema.Types.Mixed,
-      ipAddress: String,
-      userAgent: String,
-      verificationToken: String
-    }
-  },
-
-  // Document Information
-  finalDocument: {
-    type: String // URL or file path
-  },
-
-  // Terms and Conditions
-  terms: {
-    type: mongoose.Schema.Types.Mixed,
-    default: {}
-  },
-
-
-  // Communication
-  messages: [{
-    from: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
+      ref: "User",
+      required: true,
     },
-    message: String,
-    attachments: [{
-      url: String,
-      name: String,
-      type: String
-    }],
-    sentAt: {
-      type: Date,
-      default: Date.now
-    }
-  }],
 
-  // Changes Requested
-  requestedChanges: [{
-    requestedBy: {
+    // ================= PROPERTY =================
+    property: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
+      ref: "Property",
+      required: true,
     },
-    changes: String,
-    requestedAt: {
-      type: Date,
-      default: Date.now
+
+    // ================= LEASE TERMS =================
+    startDate: Date,
+    endDate: Date,
+
+    rentAmount: {
+      type: Number,
+      min: 0,
     },
-    resolved: {
+
+    rentFrequency: {
+      type: String,
+      enum: ["monthly", "weekly", "biweekly", "quarterly", "yearly"],
+      default: "monthly",
+    },
+
+    securityDeposit: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    utilities: {
+      includedInRent: {
+        type: [String],
+        default: [],
+      },
+      paidByTenant: {
+        type: [String],
+        default: [],
+      },
+    },
+
+    maintenanceTerms: {
+      type: String,
+      trim: true,
+    },
+
+    lateFee: {
+      type: Number,
+      min: 0,
+    },
+
+    gracePeriod: {
+      type: Number,
+      min: 0,
+    },
+    // ================= STATUS =================
+    status: {
+      type: String,
+      enum: [
+        "pending_request",
+        "draft",
+        "sent_to_tenant",
+        "changes_requested",
+        "signed_by_landlord",
+        "signed_by_tenant",
+        "fully_executed",
+        "cancelled",
+        "expired",
+      ],
+      default: "pending_request",
+    },
+
+    statusHistory: [
+      {
+        status: String,
+        changedBy: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+        },
+        reason: String,
+        changedAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
+
+    // ================= E-SIGNATURE =================
+    signatures: {
+      landlord: {
+        signedAt: Date,
+
+        signatureType: {
+          type: String,
+          enum: ["draw", "type", "upload"],
+        },
+
+        signatureData: {
+          dataUrl: String,
+          typedText: String,
+        },
+
+        ipAddress: String,
+        userAgent: String,
+      },
+
+      tenant: {
+        signedAt: Date,
+
+        signatureType: {
+          type: String,
+          enum: ["draw", "type", "upload"],
+        },
+
+        signatureData: {
+          dataUrl: String,
+          typedText: String,
+        },
+
+        ipAddress: String,
+        userAgent: String,
+      },
+    },
+
+    // ================= DOCUMENT =================
+    finalDocument: {
+      type: String, // PDF URL
+    },
+
+    // ================= TERMS =================
+    terms: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
+    },
+
+    // ================= MESSAGES =================
+    messages: [
+      {
+        from: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+        },
+        message: String,
+        attachments: [
+          {
+            url: String,
+            name: String,
+            type: String,
+          },
+        ],
+        sentAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
+
+    // ================= CHANGE REQUESTS =================
+    requestedChanges: [
+      {
+        requestedBy: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+        },
+        changes: String,
+        requestedAt: {
+          type: Date,
+          default: Date.now,
+        },
+        resolved: {
+          type: Boolean,
+          default: false,
+        },
+        resolvedAt: Date,
+      },
+    ],
+
+    // ================= AUDIT =================
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+
+    isLocked: {
       type: Boolean,
-      default: false
+      default: false,
     },
-    resolvedAt: Date,
-  }],
 
-  // Audit Trail
-  createdBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
+    lockedAt: Date,
+
+    expiresAt: Date,
+
+    deletedAt: Date,
+
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
   },
-
-  // Lock after signing
-  isLocked: {
-    type: Boolean,
-    default: false
+  {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   },
+);
 
-  lockedAt: Date,
-
-  // Expiration tracking
-  expiresAt: Date,
-
-  // Timestamps
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-
-  updatedAt: {
-    type: Date,
-    default: Date.now
-  },
-
-  deletedAt: Date,
-
-  isDeleted: {
-    type: Boolean,
-    default: false
-  }
-}, {
-  timestamps: true,
-  toJSON: { virtuals: true },
-  toObject: { virtuals: true }
-});
-
-// Indexes
+// ================= INDEXES =================
 leaseSchema.index({ landlord: 1, status: 1 });
 leaseSchema.index({ tenant: 1, status: 1 });
 leaseSchema.index({ property: 1 });
 leaseSchema.index({ status: 1, endDate: 1 });
 leaseSchema.index({ createdAt: -1 });
 leaseSchema.index({ isLocked: 1 });
-leaseSchema.index({ 'signatures.landlord.verificationToken': 1 });
-leaseSchema.index({ 'signatures.tenant.verificationToken': 1 });
 
-// Virtuals
-leaseSchema.virtual('duration').get(function () {
+// ================= VIRTUALS =================
+leaseSchema.virtual("duration").get(function () {
+  if (!this.startDate || !this.endDate) return 0;
   const diffTime = Math.abs(this.endDate - this.startDate);
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  return diffDays;
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 });
 
-leaseSchema.virtual('isActive').get(function () {
-  return this.status === 'fully_executed' &&
+leaseSchema.virtual("isActive").get(function () {
+  return (
+    this.status === "fully_executed" &&
     new Date() >= this.startDate &&
-    new Date() <= this.endDate;
+    new Date() <= this.endDate
+  );
 });
 
-leaseSchema.virtual('isExpired').get(function () {
-  return this.status === 'fully_executed' && new Date() > this.endDate;
+leaseSchema.virtual("isExpired").get(function () {
+  return this.status === "expired";
 });
 
-leaseSchema.virtual('isSignedByLandlord').get(function () {
+leaseSchema.virtual("isSignedByLandlord").get(function () {
   return !!this.signatures.landlord?.signedAt;
 });
 
-leaseSchema.virtual('isSignedByTenant').get(function () {
+leaseSchema.virtual("isSignedByTenant").get(function () {
   return !!this.signatures.tenant?.signedAt;
 });
 
-leaseSchema.virtual('isFullySigned').get(function () {
-  return !!this.signatures.landlord?.signedAt && !!this.signatures.tenant?.signedAt;
+leaseSchema.virtual("isFullySigned").get(function () {
+  return (
+    !!this.signatures.landlord?.signedAt && !!this.signatures.tenant?.signedAt
+  );
 });
 
-leaseSchema.virtual('nextAction').get(function () {
+leaseSchema.virtual("nextAction").get(function () {
   switch (this.status) {
-    case 'draft':
-      return { by: 'landlord', action: 'send_to_tenant' };
-    case 'sent_to_tenant':
-      return { by: 'tenant', action: 'review' };
-    case 'changes_requested':
-      return { by: 'landlord', action: 'update_lease' };
-    case 'signed_by_landlord':
-      return { by: 'tenant', action: 'sign' };
-    case 'signed_by_tenant':
-      return { by: 'landlord', action: 'sign' };
+    case "draft":
+      return { by: "landlord", action: "send_to_tenant" };
+    case "sent_to_tenant":
+      return { by: "tenant", action: "review" };
+    case "changes_requested":
+      return { by: "landlord", action: "update_lease" };
+    case "signed_by_landlord":
+      return { by: "tenant", action: "sign" };
     default:
       return null;
   }
 });
 
-// Middleware to update status history
-leaseSchema.pre('save', function () {
-  if (this.isModified('status')) {
+// ================= MIDDLEWARE =================
+leaseSchema.pre("save", function () {
+  if (this.isModified("status")) {
     this.statusHistory.push({
       status: this.status,
       changedBy: this._updatedBy || this.createdBy,
-      changedAt: new Date()
+      changedAt: new Date(),
     });
   }
 
-  // Auto-lock when fully executed
-  if (this.status === 'fully_executed' && !this.isLocked) {
+  if (this.status === "fully_executed" && !this.isLocked) {
     this.isLocked = true;
     this.lockedAt = new Date();
   }
 
-  // Auto-expire when end date passed
-  if (this.status === 'fully_executed' && new Date() > this.endDate) {
-    this.status = 'expired';
+  if (this.status === "fully_executed" && new Date() > this.endDate) {
+    this.status = "expired";
   }
 
-  // Set expiresAt for signature (30 days from creation)
-  if (!this.expiresAt && this.status !== 'fully_executed') {
-    const expires = new Date();
-    expires.setDate(expires.getDate() + 30);
-    this.expiresAt = expires;
+  if (!this.expiresAt && this.status !== "fully_executed") {
+    const exp = new Date();
+    exp.setDate(exp.getDate() + 30);
+    this.expiresAt = exp;
   }
-
 });
 
-const Lease = mongoose.models.Lease || mongoose.model('Lease', leaseSchema);
+const Lease = mongoose.models.Lease || mongoose.model("Lease", leaseSchema);
+
 export default Lease;
