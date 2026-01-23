@@ -1,6 +1,6 @@
 import express from "express";
-import { envVars } from "./app/config/env.js";
 import cors from "cors";
+import { envVars } from "./app/config/env.js";
 import { router } from "./app/routes/index.js";
 import { seedSuperAdmin } from "./app/utils/seedSuperAdmin.js";
 import mongoose from "mongoose";
@@ -70,6 +70,6 @@ const startServer = async () => {
 
 (async () => {
   await startServer()
-  // seedSuperAdmin()
+  seedSuperAdmin()
 })()
 export default app;

@@ -201,12 +201,12 @@ const requestChanges = catchAsync(async (req, res) => {
 const updateLease = catchAsync(async (req, res) => {
   const { leaseId } = req.params;
   const updates = req.body;
-  const landlordId = req.user.userId;
+  const userId = req.user.userId;
 
+  // Find lease (both landlord and tenant can update)
   const lease = await Lease.findOne({
     _id: leaseId,
-    landlord: landlordId,
-    status: { $in: ["draft", "changes_requested"] },
+    $or: [{ landlord: userId }, { tenant: userId }],
     isDeleted: false,
   });
 
@@ -217,66 +217,119 @@ const updateLease = catchAsync(async (req, res) => {
     );
   }
 
-  const allowedUpdates = [
-    "title",
-    "description",
-    "startDate",
-    "endDate",
-    "rentAmount",
-    "rentFrequency",
-    "securityDeposit",
-    "utilities",
-    "maintenanceTerms",
-    "terms",
-    "customClauses",
-  ];
+  const isLandlord = lease.landlord.toString() === userId;
+  const isTenant = lease.tenant.toString() === userId;
 
-  // Update allowed fields
-  allowedUpdates.forEach((field) => {
-    if (updates[field] !== undefined) {
-      lease[field] = updates[field];
+  if (updates.status) {
+    if (isTenant && updates.status === "sent_to_landlord" && lease.status === "sent_to_tenant") {
+      lease.status = "sent_to_landlord";
+
+      // Add status history
+      lease.statusHistory.push({
+        status: "sent_to_landlord",
+        changedBy: userId,
+        reason: updates.message || "Tenant sent lease to landlord for signature",
+      });
     }
-  });
+    // Landlord can change status to "draft" or "sent_to_tenant" from appropriate states
+    else if (isLandlord &&
+      (updates.status === "draft" && lease.status === "changes_requested") ||
+      (updates.status === "sent_to_tenant" && lease.status === "draft")
+    ) {
+      lease.status = updates.status;
 
-  // Handle change request resolution
-  if (lease.status === "changes_requested") {
-    lease.requestedChanges.forEach((rc) => {
-      if (!rc.resolved) {
-        rc.resolved = true;
-        rc.resolvedAt = new Date();
-        rc.resolutionNotes = updates.resolutionNotes || "Resolved by landlord";
+      lease.statusHistory.push({
+        status: updates.status,
+        changedBy: userId,
+        reason: updates.message || "Status updated by landlord",
+      });
+    }
+    else {
+      throw new AppError(400, "Cannot update status in current state");
+    }
+  }
+  if (isLandlord) {
+    const allowedUpdates = [
+      "title",
+      "description",
+      "startDate",
+      "endDate",
+      "rentAmount",
+      "rentFrequency",
+      "securityDeposit",
+      "customClauses",
+    ];
+
+    // Update allowed fields
+    allowedUpdates.forEach((field) => {
+      if (updates[field] !== undefined) {
+        lease[field] = updates[field];
       }
     });
 
-    lease.status = "draft";
-    lease._updatedBy = landlordId;
+    // ===== FIX: Handle utilities object properly =====
+    if (updates.utilities) {
+      // Initialize utilities object if it doesn't exist
+      if (!lease.utilities) {
+        lease.utilities = {};
+      }
 
-    lease.statusHistory.push({
-      status: "draft",
-      changedBy: landlordId,
-      reason: "Tenant requested changes resolved by landlord",
+      // Update includedInRent
+      if (updates.utilities.includedInRent !== undefined) {
+        lease.utilities.includedInRent = updates.utilities.includedInRent;
+      }
+
+      // Update paidByTenant
+      if (updates.utilities.paidByTenant !== undefined) {
+        lease.utilities.paidByTenant = updates.utilities.paidByTenant;
+      }
+
+      // Mark utilities as modified for Mongoose
+      lease.markModified('utilities');
+    }
+
+    // ===== Handle Maintenance Terms =====
+    if (updates.maintenanceTerms !== undefined) {
+      lease.maintenanceTerms = updates.maintenanceTerms;
+    }
+
+    // ===== MERGE Terms =====
+    if (updates.terms) {
+      lease.terms = {
+        ...(lease.terms?.toObject?.() || lease.terms || {}),
+        ...updates.terms,
+      };
+      lease.markModified('terms');
+    }
+
+    // Handle change request resolution
+    if (lease.status === "changes_requested" && updates.status === "draft") {
+      lease.requestedChanges.forEach((rc) => {
+        if (!rc.resolved) {
+          rc.resolved = true;
+          rc.resolvedAt = new Date();
+          rc.resolutionNotes = updates.resolutionNotes || "Resolved by landlord";
+        }
+      });
+    }
+  }
+
+  // ===== ADD MESSAGE (both can add messages) =====
+  if (updates.message?.trim()) {
+    lease.messages.push({
+      from: userId,
+      message: updates.message.trim(),
+      sentAt: new Date(),
     });
   }
 
-  // Add message
-  lease.messages.push({
-    from: landlordId,
-    message:
-      updates.message ||
-      (lease.status === "draft"
-        ? "Lease updated after tenant requested changes"
-        : "Lease updated"),
-    sentAt: new Date(),
-  });
-
+  lease._updatedBy = userId;
   await lease.save();
 
   console.log("Lease updated successfully:", {
     leaseId: lease._id,
-    rentAmount: lease.rentAmount,
-    securityDeposit: lease.securityDeposit,
-    startDate: lease.startDate,
-    endDate: lease.endDate,
+    status: lease.status,
+    updatedBy: isLandlord ? "landlord" : "tenant",
   });
 
   res.status(httpStatus.OK).json({
@@ -285,6 +338,7 @@ const updateLease = catchAsync(async (req, res) => {
     data: lease,
   });
 });
+
 
 // Sign lease with simple signature
 const signLease = catchAsync(async (req, res) => {
@@ -315,8 +369,9 @@ const signLease = catchAsync(async (req, res) => {
 
   const role = isLandlord ? "landlord" : "tenant";
 
-  // signing order
-  if (role === "tenant" && !lease.signatures.landlord?.signedAt) {
+  // ================= SIGNING ORDER (IMPORTANT) =================
+  // Tenant CANNOT sign before landlord
+  if (role === "tenant" && !lease.signatures?.landlord?.signedAt) {
     throw new AppError(400, "Landlord must sign first");
   }
 
@@ -331,7 +386,7 @@ const signLease = catchAsync(async (req, res) => {
   const uploadResult = await uploadServices.uploadSingleFile(
     signatureBuffer,
     `leases/${leaseId}/signatures`,
-    "image",
+    "image"
   );
 
   // ================= SAVE SIGNATURE =================
@@ -346,11 +401,13 @@ const signLease = catchAsync(async (req, res) => {
     userAgent: req.headers["user-agent"],
   };
 
-  // ================= STATUS =================
+  // ================= STATUS UPDATE =================
   if (role === "landlord") {
     lease.status = "signed_by_landlord";
   } else {
     lease.status = "fully_executed";
+    lease.isLocked = true;
+    lease.lockedAt = new Date();
   }
 
   lease.messages.push({
@@ -371,6 +428,7 @@ const signLease = catchAsync(async (req, res) => {
     },
   });
 });
+
 
 // Get leases for current user
 const getMyLeases = catchAsync(async (req, res) => {
@@ -642,10 +700,14 @@ const approveRequest = catchAsync(async (req, res) => {
 
   if (!lease.rentAmount && lease.property?.price) {
     lease.rentAmount = lease.property.price;
-    console.log(
-      "Setting rentAmount from property.price:",
-      lease.property.price,
-    );
+  }
+
+  // Initialize utilities if needed
+  if (!lease.utilities) {
+    lease.utilities = {
+      includedInRent: [],
+      paidByTenant: []
+    };
   }
 
   lease.statusHistory.push({
@@ -656,11 +718,71 @@ const approveRequest = catchAsync(async (req, res) => {
 
   await lease.save();
 
-  console.log("After save - rentAmount:", lease.rentAmount);
-
   res.json({
     success: true,
     message: "Request approved. Lease draft created",
+    data: lease,
+  });
+});
+
+
+// Send to landlord for signature (Tenant sends to landlord)
+const sendToLandlordForSignature = catchAsync(async (req, res) => {
+  const { leaseId } = req.params;
+  const { message } = req.body;
+  const tenantId = req.user.userId;
+
+  // Find lease
+  const lease = await Lease.findOne({
+    _id: leaseId,
+    tenant: tenantId,
+    status: "sent_to_tenant", // Only when lease is sent to tenant
+    isDeleted: false,
+  });
+
+  if (!lease) {
+    throw new AppError(
+      httpStatus.NOT_FOUND,
+      "Lease not found or you are not authorized"
+    );
+  }
+
+  // Check if tenant already signed (shouldn't happen but just in case)
+  if (lease.signatures?.tenant?.signedAt) {
+    throw new AppError(400, "You have already signed this lease");
+  }
+
+  // Update status
+  lease.status = "sent_to_landlord";
+  lease._updatedBy = tenantId;
+
+  // Add message if provided
+  if (message?.trim()) {
+    lease.messages.push({
+      from: tenantId,
+      message: message.trim(),
+      sentAt: new Date(),
+    });
+  }
+
+  // Add status history
+  lease.statusHistory.push({
+    status: "sent_to_landlord",
+    changedBy: tenantId,
+    reason: "Tenant sent lease to landlord for signature",
+  });
+
+  await lease.save();
+
+  // Notify landlord (TODO: send email/notification)
+  const landlord = await User.findById(lease.landlord);
+  if (landlord) {
+    // notifyLandlord(landlord.email, lease._id);
+  }
+
+  res.status(200).json({
+    success: true,
+    message: "Lease sent to landlord for signature successfully",
     data: lease,
   });
 });
@@ -678,4 +800,5 @@ export {
   deleteLease,
   restoreLease,
   approveRequest,
+  sendToLandlordForSignature
 };

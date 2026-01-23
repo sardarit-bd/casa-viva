@@ -86,6 +86,7 @@ const leaseSchema = new mongoose.Schema(
         "pending_request",
         "draft",
         "sent_to_tenant",
+        "sent_to_landlord",
         "changes_requested",
         "signed_by_landlord",
         "signed_by_tenant",

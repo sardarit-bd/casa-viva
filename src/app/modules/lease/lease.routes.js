@@ -12,6 +12,7 @@ import {
     deleteLease,
     restoreLease,
     approveRequest,
+    sendToLandlordForSignature,
 } from './lease.controller.js'
 import { checkAuth } from '../../middlewares/checkAuth.js';
 import { Role } from '../auth/auth.model.js';
@@ -65,9 +66,9 @@ router.post(
 );
 
 router.post(
-  '/:leaseId/approve',
-  checkAuth(Role.OWNER),
-  approveRequest
+    '/:leaseId/approve',
+    checkAuth(Role.OWNER),
+    approveRequest
 );
 
 // Cancel lease
@@ -75,6 +76,18 @@ router.post(
     '/:leaseId/cancel',
     cancelLease
 );
+
+// Send to landlord for signature (tenant action)
+router.post(
+    '/:leaseId/send-to-landlord',
+    sendToLandlordForSignature
+);
+
+// Update lease status (general purpose)
+// router.put(
+//     '/:leaseId/status',
+//     updateLeaseStatus
+// );
 
 // Restore deleted lease
 router.post('/:leaseId/restore', restoreLease);
