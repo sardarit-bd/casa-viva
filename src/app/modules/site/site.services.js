@@ -1,6 +1,7 @@
 import Site from './site.model.js';
 
 const updateSite = async (payload) => {
+  console.log(payload)
   const site = await Site.findOneAndUpdate(
     {},            
     { $set: payload }, 
