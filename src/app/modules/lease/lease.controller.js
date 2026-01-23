@@ -187,7 +187,6 @@ const requestChanges = catchAsync(async (req, res) => {
 
   const otherUser = await User.findById(otherPartyId);
   if (otherUser) {
-    // send notification about requested changes
   }
 
   res.status(200).json({
@@ -231,7 +230,7 @@ const updateLease = catchAsync(async (req, res) => {
         reason: updates.message || "Tenant sent lease to landlord for signature",
       });
     }
-    // Landlord can change status to "draft" or "sent_to_tenant" from appropriate states
+
     else if (isLandlord &&
       (updates.status === "draft" && lease.status === "changes_requested") ||
       (updates.status === "sent_to_tenant" && lease.status === "draft")
@@ -542,7 +541,6 @@ const cancelLease = catchAsync(async (req, res) => {
 
   await lease.save();
 
-  // Notify other party
   const otherPartyId =
     req.user.userId.toString() === lease.landlord.toString()
       ? lease.tenant
@@ -550,7 +548,6 @@ const cancelLease = catchAsync(async (req, res) => {
 
   const otherUser = await User.findById(otherPartyId);
   if (otherUser) {
-    // send notification about lease cancellation
   }
 
   res.status(200).json({
@@ -726,7 +723,6 @@ const approveRequest = catchAsync(async (req, res) => {
 });
 
 
-// Send to landlord for signature (Tenant sends to landlord)
 const sendToLandlordForSignature = catchAsync(async (req, res) => {
   const { leaseId } = req.params;
   const { message } = req.body;
@@ -736,7 +732,7 @@ const sendToLandlordForSignature = catchAsync(async (req, res) => {
   const lease = await Lease.findOne({
     _id: leaseId,
     tenant: tenantId,
-    status: "sent_to_tenant", // Only when lease is sent to tenant
+    status: "sent_to_tenant",
     isDeleted: false,
   });
 
@@ -746,8 +742,6 @@ const sendToLandlordForSignature = catchAsync(async (req, res) => {
       "Lease not found or you are not authorized"
     );
   }
-
-  // Check if tenant already signed (shouldn't happen but just in case)
   if (lease.signatures?.tenant?.signedAt) {
     throw new AppError(400, "You have already signed this lease");
   }
