@@ -22,7 +22,7 @@ const createBlog = catchAsync(async (req, res) => {
 
 const getAllBlogs = catchAsync(async (req, res) => {
   const filter = pick(req.query, [
-    'search', 'category', 'status', 'author'
+    'search', 'category', 'status', 'author', 'sortBy'
   ]);
   
   const paginationOptions = pick(req.query, ['page', 'limit', 'sortBy', 'sortOrder']);
