@@ -7,6 +7,9 @@ import { LeaseRoutes } from "../modules/lease/lease.routes.js";
 import { UsersRoutes } from "../modules/users/users.route.js";
 import { BlogRoutes } from "../modules/blog/blog.route.js";
 import { SiteRoutes } from "../modules/site/site.routes.js";
+import { exportRoutes } from "../modules/exports/exports.routes.js";
+import path from "path";
+import { dashboardRoutes } from "../modules/dashboard/dashboard.routes.js";
 
 export const router = Router()
 
@@ -42,6 +45,14 @@ const moduleRoutes = [
     {
         path: '/site',
         route: SiteRoutes
+    },
+    {
+        path: '/exports',
+        route: exportRoutes
+    },
+    {
+        path: '/dashboard',
+        route: dashboardRoutes
     }
 ]
 

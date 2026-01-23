@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
-import { envVars } from "./app/config/env.js";
 import { router } from "./app/routes/index.js";
+import { envVars } from "./app/config/env.js";
 import mongoose from "mongoose";
 
 
@@ -25,8 +25,8 @@ app.use(
 app.use(async (req, res, next) => {
   try {
     await mongoose.connect(envVars.DB_URL, {
-      serverSelectionTimeoutMS: 30000,
-      connectTimeoutMS: 30000,
+      serverSelectionTimeoutMS: 60000,
+      connectTimeoutMS: 60000,
     })
     console.log('Connected to DB')
     next();
