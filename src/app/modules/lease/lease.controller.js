@@ -318,6 +318,16 @@ const sendToTenant = catchAsync(async (req, res) => {
     throw new AppError(404, "Lease not found or cannot be sent");
   }
 
+    if (lease.requestedChanges?.length > 0) {
+    lease.requestedChanges.forEach(rc => {
+      if (!rc.resolved) {
+        rc.resolved = true;
+        rc.resolvedAt = new Date();
+        rc.resolutionNotes = "Changes implemented by landlord";
+      }
+    });
+  }
+
   // Validate required fields
   const validations = [];
   if (!lease.startDate) validations.push("Start date");
