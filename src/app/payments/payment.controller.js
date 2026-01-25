@@ -1,3 +1,4 @@
+import Lease from "../modules/lease/lease.model.js";
 import Property from "../modules/properties/properties.model.js";
 import { catchAsync } from "../utils/catchAsync.js";
 import Payment from "./payment.model.js";
@@ -36,6 +37,53 @@ const createCheckout = catchAsync(async (req, res) => {
     metadata: {
       propertyTitle: property.title,
       propertyAddress: property.address,
+      userEmail: req.user.email
+    }
+  });
+  
+  res.status(200).json({
+    success: true,
+    message: 'Checkout session created',
+    data: {
+      sessionId: session.id,
+      url: session.url,
+      paymentId: payment._id
+    }
+  });
+});
+
+
+const leaseCheckout = catchAsync(async (req, res) => {
+  const { leaseId } = req.body;
+  
+  // Verify property belongs to user
+  const lease = await Lease.findOne({
+    _id: leaseId,
+    isDeleted: false
+  });
+  
+  if (!lease) {
+    return res.status(404).json({
+      success: false,
+      message: 'Lease is not found!'
+    });
+  }
+  
+  // Create Stripe checkout session
+  const session = await stripeService.leaseCheckoutSession(lease, req.user);
+
+  // Save payment record in database
+  const payment = await Payment.create({
+    sessionId: session.id,
+    amount: lease?.securityDeposit + lease?.rentAmount,
+    currency: 'usd',
+    user: req.user.userId,
+    lease: leaseId,
+    paymentType: 'lease',
+    status: 'pending',
+    description: 'lease property payment',
+    metadata: {
+      leaseTitle: lease.title,
       userEmail: req.user.email
     }
   });
@@ -97,6 +145,72 @@ const verifyPayment = catchAsync(async (req, res) => {
       data: {
         paymentId: payment._id,
         propertyId,
+        featured: true,
+        paymentStatus: 'paid'
+      }
+    });
+  } else if (session.payment_status === 'unpaid' || session.payment_status === 'canceled') {
+    payment.status = 'failed';
+    await payment.save();
+    
+    return res.status(400).json({
+      success: false,
+      message: 'Payment failed or canceled'
+    });
+  }
+  
+  res.status(400).json({
+    success: false,
+    message: 'Payment not completed'
+  });
+});
+
+const verifyLeasePayment = catchAsync(async (req, res) => {
+  const { sessionId } = req.body;
+  
+  const session = await stripeService.verifyPayment(sessionId);
+  
+  if (!session) {
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid session'
+    });
+  }
+  
+  // Find payment record
+  const payment = await Payment.findOne({ sessionId });
+  
+  if (!payment) {
+    return res.status(404).json({
+      success: false,
+      message: 'Payment record not found'
+    });
+  }
+  
+  if (session.payment_status === 'paid') {
+    // Update payment record
+    payment.status = 'paid';
+    payment.paidAt = new Date();
+    payment.paymentIntentId = session.payment_intent;
+    payment.cardLast4 = session.payment_intent?.charges?.data[0]?.payment_method_details?.card?.last4;
+    payment.cardBrand = session.payment_intent?.charges?.data[0]?.payment_method_details?.card?.brand;
+    await payment.save();
+    
+    // Update property to featured
+    console.log(session.metadata)
+    const leaseId = session.metadata.propertyId;
+    console.log(leaseId)
+    const result = await Lease.findByIdAndUpdate(leaseId, {
+      paid: true,
+      // featuredExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+    });
+    console.log(result)
+    return res.status(200).json({
+      success: true,
+      message: 'Payment verified. Paid for lease',
+      data: {
+        paymentId: payment._id,
+        leaseId,
         featured: true,
         paymentStatus: 'paid'
       }
@@ -408,7 +522,9 @@ const getRefundDetails = catchAsync(async (req, res) => {
 
 export const paymentController = {
   createCheckout,
+  leaseCheckout,
   verifyPayment,
+  verifyLeasePayment,
   getPaymentHistory,
   getPaymentDetails,
   requestRefund,
