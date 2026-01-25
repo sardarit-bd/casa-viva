@@ -121,6 +121,60 @@ const verifyPayment = catchAsync(async (req, res) => {
 const getPaymentHistory = catchAsync(async (req, res) => {
   const { page = 1, limit = 10, status, paymentType, startDate, endDate } = req.query;
   
+  // Apply filters
+  if (status) query.status = status;
+  if (paymentType) query.paymentType = paymentType;
+  
+  // Date range filter
+  if (startDate || endDate) {
+    query.createdAt = {};
+    if (startDate) query.createdAt.$gte = new Date(startDate);
+    if (endDate) query.createdAt.$lte = new Date(endDate);
+  }
+  
+  const skip = (page - 1) * limit;
+  
+  const [payments, total] = await Promise.all([
+    Payment.find()
+      .populate('property', 'title images city address')
+      .populate('user', "name")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit))
+      .lean(),
+    Payment.countDocuments()
+  ]);
+  
+  // Calculate total spent
+  const totalSpent = await Payment.aggregate([
+    { $match: { status: 'paid' } },
+    { $group: { _id: null, total: { $sum: '$amount' } } }
+  ]);
+  
+  res.status(200).json({
+    success: true,
+    message: 'Payment history retrieved',
+    data: {
+      payments,
+      summary: {
+        totalPayments: total,
+        totalSpent: totalSpent[0]?.total || 0,
+        successfulPayments: await Payment.countDocuments({status: 'paid' }),
+        refundedPayments: await Payment.countDocuments({ status: 'refunded' })
+      },
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    }
+  });
+});
+
+const getMyPaymentHistory = catchAsync(async (req, res) => {
+  const { page = 1, limit = 10, status, paymentType, startDate, endDate } = req.query;
+  
   const query = { user: req.user.userId };
   
   // Apply filters
@@ -358,5 +412,6 @@ export const paymentController = {
   getPaymentHistory,
   getPaymentDetails,
   requestRefund,
-  getRefundDetails
+  getRefundDetails,
+  getMyPaymentHistory
 }

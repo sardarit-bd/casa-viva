@@ -10,6 +10,7 @@ export const createUserTokens = (user) => {
     userId: user._id,
     email: user.email,
     role: user.role,
+    verified: user.verified
   };
   const accessToken = generateToken(
     jwtPayload,

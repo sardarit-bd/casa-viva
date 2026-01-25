@@ -17,6 +17,19 @@ const updateProfile = catchAsync(
     }
 );
 
+const verifyUser = catchAsync(
+    async (req, res, next) => {
+        const userId = req.body?.user
+        const user = await UserServices.verifyUser(userId);
+
+        sendResponse(res, {
+            statusCode: httpStatus.CREATED,
+            success: true,
+            message: "The user is now verified!",
+            data: user,
+        });
+    }
+);
 const getProfile = catchAsync(
     async (req, res, next) => {
         const verifiedToken = req.user;
@@ -31,8 +44,23 @@ const getProfile = catchAsync(
         });
     }
 );
+const getAllUsers = catchAsync(
+    async (req, res, next) => {
+        const verifiedToken = req.user;
 
+        const users = await UserServices.getAllUsers()
+
+        sendResponse(res, {
+            statusCode: httpStatus.OK,
+            success: true,
+            message: "Users fetched Successfully",
+            data: users,
+        });
+    }
+);
 export const UserControllers = {
    updateProfile,
-   getProfile
+   getProfile,
+   getAllUsers,
+   verifyUser
 };
