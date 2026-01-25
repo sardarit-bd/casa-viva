@@ -37,6 +37,39 @@ const createCheckoutSession = async (property, user) => {
   }
 };
 
+const leaseCheckoutSession = async (lease, user) => {
+  try {
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: 'Lease Property',
+              description: `Lease Property for: ${lease.title}`,
+            },
+            unit_amount: lease?.securityDeposit + lease?.rentAmount * 100, // $24.99
+          },
+          quantity: 1,
+        },
+      ],
+      mode: 'payment',
+      success_url: `${process.env.FRONTEND_URL}/lease-payment-success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.FRONTEND_URL}/payment-cancel`,
+      metadata: {
+        propertyId: lease._id.toString(),
+        userId: user.userId.toString(),
+        type: 'lease'
+      },
+    });
+
+    return session;
+  } catch (error) {
+    console.error('Stripe error:', error);
+    throw new Error(error.message);
+  }
+};
 // Verify payment
 const verifyPayment = async (sessionId) => {
   try {
@@ -95,6 +128,7 @@ const getRefund = async (refundId) => {
 
 export const stripeService = {
   createCheckoutSession,
+  leaseCheckoutSession,
   verifyPayment,
   createRefund,
   getPaymentIntent,

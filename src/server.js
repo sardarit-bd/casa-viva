@@ -25,8 +25,8 @@ app.use(
 app.use(async (req, res, next) => {
   try {
     await mongoose.connect(envVars.DB_URL, {
-      serverSelectionTimeoutMS: 60000,
-      connectTimeoutMS: 60000,
+      serverSelectionTimeoutMS: 30000,
+      connectTimeoutMS: 30000,
     })
     console.log('Connected to DB')
     next();
