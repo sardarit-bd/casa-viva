@@ -8,9 +8,7 @@ import mongoose from "mongoose";
 import cookieParser from "cookie-parser";
 import { globalErrorHandle } from "./app/middlewares/globalErrorHandler.js";
 import { notFound } from "./app/middlewares/notFound.js";
-import { createRequire } from 'module';
 
-const require = createRequire(import.meta.url);
 const app = express();
 app.use(express.json());
 app.use(cookieParser());
@@ -27,8 +25,8 @@ app.use(
 app.use(async (req, res, next) => {
   try {
     await mongoose.connect(envVars.DB_URL, {
-      serverSelectionTimeoutMS: 30000,
-      connectTimeoutMS: 30000,
+      serverSelectionTimeoutMS: 60000,
+      connectTimeoutMS: 60000,
     })
     console.log('Connected to DB')
     next();
@@ -70,6 +68,6 @@ const startServer = async () => {
 
 (async () => {
   await startServer()
-  seedSuperAdmin()
+  // seedSuperAdmin()
 })()
 export default app;
