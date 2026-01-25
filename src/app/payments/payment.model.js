@@ -36,7 +36,7 @@ const paymentSchema = new mongoose.Schema({
   // Payment Type
   paymentType: {
     type: String,
-    enum: ['featured_listing', 'property_promotion', 'one_time'],
+    enum: ['featured_listing', 'property_promotion', 'one_time', 'lease'],
     required: true
   },
   

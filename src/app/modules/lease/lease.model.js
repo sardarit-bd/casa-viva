@@ -32,7 +32,10 @@ const leaseSchema = new mongoose.Schema(
       ref: "Property",
       required: true,
     },
-
+    paid: {
+      type: Boolean,
+      default: false
+    },
     // ================= APPLICATION SCREENING =================
     application: {
       status: {
@@ -112,6 +115,7 @@ const leaseSchema = new mongoose.Schema(
         default: [],
       },
     },
+
 
     maintenanceTerms: {
       type: String,
@@ -409,7 +413,7 @@ leaseSchema.virtual("monthsRemaining").get(function () {
   const now = new Date();
   const end = new Date(this.endDate);
   if (end <= now) return 0;
-  
+
   const months = (end.getFullYear() - now.getFullYear()) * 12;
   return months - now.getMonth() + end.getMonth();
 });
@@ -443,10 +447,10 @@ leaseSchema.virtual("isFullySigned").get(function () {
 leaseSchema.virtual("requiresAction").get(function () {
   const user = this._user; // Set from middleware
   if (!user) return null;
-  
+
   const isLandlord = this.landlord && user._id.toString() === this.landlord.toString();
   const isTenant = this.tenant && user._id.toString() === this.tenant.toString();
-  
+
   switch (this.status) {
     case "pending_request":
       return isLandlord ? { action: "review_application", priority: "high" } : null;
@@ -509,20 +513,20 @@ leaseSchema.pre("save", function () {
   if (this.endDate && new Date() > this.endDate && this.status === "active") {
     this.status = "expired";
   }
-  
+
   // Set active status after move-in
   if (this.metadata?.moveInDate && new Date() >= this.metadata.moveInDate && this.status === "fully_executed") {
     this.status = "active";
   }
-  
+
   // Auto-create renewal notice 60 days before expiry
   if (this.endDate) {
     const sixtyDaysBefore = new Date(this.endDate);
     sixtyDaysBefore.setDate(sixtyDaysBefore.getDate() - 60);
-    
-    if (new Date() >= sixtyDaysBefore && 
-        this.status === "active" && 
-        !this.notices.some(n => n.type === "renewal")) {
+
+    if (new Date() >= sixtyDaysBefore &&
+      this.status === "active" &&
+      !this.notices.some(n => n.type === "renewal")) {
       this.notices.push({
         type: "renewal",
         givenBy: this.landlord,
@@ -534,7 +538,7 @@ leaseSchema.pre("save", function () {
       this.renewal.status = "pending";
     }
   }
-  
+
 });
 
 const Lease = mongoose.models.Lease || mongoose.model("Lease", leaseSchema);

@@ -10,6 +10,9 @@ import { SiteRoutes } from "../modules/site/site.routes.js";
 import { exportRoutes } from "../modules/exports/exports.routes.js";
 import path from "path";
 import { dashboardRoutes } from "../modules/dashboard/dashboard.routes.js";
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
 
 export const router = Router()
 
