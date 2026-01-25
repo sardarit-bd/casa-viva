@@ -23,6 +23,28 @@ router.post(
 // Get payment history
 router.get('/history', checkAuth(Role.OWNER, Role.SUPER_ADMIN, Role.TENANT), paymentController.getPaymentHistory);
 
+
+router.post(
+  '/lease-checkout',
+  checkAuth(Role.OWNER, Role.SUPER_ADMIN, Role.TENANT),
+  paymentController.leaseCheckout
+);
+
+// Verify payment (requires auth)
+router.post(
+  '/lease-verify',
+    checkAuth(Role.OWNER, Role.SUPER_ADMIN, Role.TENANT),
+  paymentController.verifyLeasePayment
+);
+
+// Get payment history
+router.get('/lease-history', checkAuth(Role.OWNER, Role.SUPER_ADMIN, Role.TENANT), paymentController.getPaymentHistory);
+
+
+
+
+
+
 // Get single payment details
 router.get('/:id', checkAuth(Role.OWNER, Role.SUPER_ADMIN, Role.TENANT), paymentController.getPaymentDetails);
 

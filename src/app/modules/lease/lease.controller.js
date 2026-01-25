@@ -60,9 +60,9 @@ const createLease = catchAsync(async (req, res) => {
     landlord: landlordId,
     tenant: tenantId,
     property: propertyId,
-    status: "pending_request",
+    status: "draft",
     application: {
-      status: "pending",
+      status: "approved",
       submittedAt: new Date(),
       documents: [],
     },
@@ -76,7 +76,7 @@ const createLease = catchAsync(async (req, res) => {
       readBy: [tenantId],
     }] : [],
     statusHistory: [{
-      status: "pending_request",
+      status: "draft",
       changedBy: tenantId,
       reason: "Tenant applied for property",
     }],
