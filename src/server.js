@@ -1,9 +1,9 @@
 import express from "express";
 import cors from "cors";
-import { router } from "./app/routes/index.js";
 import { envVars } from "./app/config/env.js";
+import { router } from "./app/routes/index.js";
+import { seedSuperAdmin } from "./app/utils/seedSuperAdmin.js";
 import mongoose from "mongoose";
-
 
 import cookieParser from "cookie-parser";
 import { globalErrorHandle } from "./app/middlewares/globalErrorHandler.js";
@@ -70,5 +70,4 @@ const startServer = async () => {
   await startServer()
   // seedSuperAdmin()
 })()
-
-export default app
+export default app;
