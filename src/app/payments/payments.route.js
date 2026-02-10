@@ -38,7 +38,7 @@ router.post(
 );
 
 // Get payment history
-router.get('/lease-history', checkAuth(Role.OWNER, Role.SUPER_ADMIN, Role.TENANT), paymentController.getPaymentHistory);
+router.get('/my-history', checkAuth(Role.OWNER, Role.SUPER_ADMIN, Role.TENANT), paymentController.getMyPaymentHistory);
 
 
 
