@@ -16,6 +16,7 @@ app.use(
   cors({
     origin: [
       'https://real-estate-punta.vercel.app',
+      'https://casa-viva-frontend.vercel.app/',
       'http://localhost:3000'
     ],
     credentials: true,
