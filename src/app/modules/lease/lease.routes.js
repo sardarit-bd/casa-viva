@@ -20,7 +20,8 @@ import {
     getLeaseStats,
     deleteLease,
     restoreLease,
-    sendToLandlordForSignature
+    sendToLandlordForSignature,
+    getAllLeases
 } from './lease.controller.js'
 import { checkAuth } from '../../middlewares/checkAuth.js';
 import { Role } from '../auth/auth.model.js';
@@ -34,7 +35,10 @@ router.get('/my-leases',
     checkAuth(Role.OWNER, Role.TENANT, Role.ADMIN, Role.SUPER_ADMIN), 
     getMyLeases
 );
-
+router.get('/', 
+    checkAuth(Role.OWNER, Role.TENANT, Role.ADMIN, Role.SUPER_ADMIN), 
+    getAllLeases
+);
 // Get lease statistics
 router.get('/stats', 
     checkAuth(Role.OWNER, Role.ADMIN, Role.SUPER_ADMIN, Role.TENANT), 

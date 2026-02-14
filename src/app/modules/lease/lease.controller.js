@@ -885,6 +885,35 @@ const getMyLeases = catchAsync(async (req, res) => {
   });
 });
 
+const getAllLeases = catchAsync(async (req, res) => {
+
+  const leases = await Lease.find()
+    .populate(
+      "property",
+      "title address city state zipCode type price bedrooms bathrooms amenities"
+    )
+    .populate("landlord", "name email phone profilePicture")
+    .populate("tenant", "name email phone profilePicture")
+    .populate("application.reviewedBy", "name")
+    .sort({ createdAt: -1 });
+
+  res.status(200).json({
+    success: true,
+    message: "Leases retrieved successfully",
+    data: leases,
+    count: leases.length,
+    summary: {
+      applications: leases.filter(l => ["pending_request", "under_review"].includes(l.status)).length,
+      active: leases.filter(l => ["active", "fully_executed"].includes(l.status)).length,
+      expiringSoon: leases.filter(l => 
+        l.status === "active" && 
+        l.endDate && 
+        new Date(l.endDate) <= new Date(new Date().setDate(new Date().getDate() + 30))
+      ).length,
+    },
+  });
+});
+
 // 12. Get lease by ID
 const getLeaseById = catchAsync(async (req, res) => {
   const { leaseId } = req.params;
@@ -894,9 +923,10 @@ const getLeaseById = catchAsync(async (req, res) => {
     throw new AppError(400, "Invalid lease ID format");
   }
 
+
   const lease = await Lease.findOne({
     _id: leaseId,
-    $or: [{ landlord: userId }, { tenant: userId }],
+    // $or: [{ landlord: userId }, { tenant: userId }],
     isDeleted: false,
   })
     .populate(
@@ -1539,5 +1569,6 @@ export {
   giveNotice,
   respondToRenewal,
   scheduleMoveOutInspection,
-  processDepositReturn
+  processDepositReturn,
+  getAllLeases
 };

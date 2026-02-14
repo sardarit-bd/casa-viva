@@ -22,7 +22,7 @@ router.post(
 
 // Get payment history
 router.get('/history', checkAuth(Role.OWNER, Role.SUPER_ADMIN, Role.TENANT), paymentController.getPaymentHistory);
-
+router.get('/my-history', checkAuth(Role.OWNER, Role.SUPER_ADMIN, Role.TENANT), paymentController.getMyPaymentHistory);
 
 router.post(
   '/lease-checkout',
@@ -41,16 +41,11 @@ router.post(
 router.get('/lease-history', checkAuth(Role.OWNER, Role.SUPER_ADMIN, Role.TENANT), paymentController.getPaymentHistory);
 
 
-
-
-
-
-// Get single payment details
-router.get('/:id', checkAuth(Role.OWNER, Role.SUPER_ADMIN, Role.TENANT), paymentController.getPaymentDetails);
-
 // Request refund
 router.post('/refund', checkAuth(Role.OWNER, Role.SUPER_ADMIN, Role.TENANT), paymentController.requestRefund);
 
 // Get refund details
 router.get('/refunds/:refundId', checkAuth(Role.OWNER, Role.SUPER_ADMIN, Role.TENANT), paymentController.getRefundDetails);
 export const PaymentRoutes = router;
+// Get single payment details
+router.get('/:id', checkAuth(Role.OWNER, Role.SUPER_ADMIN, Role.TENANT), paymentController.getPaymentDetails);
