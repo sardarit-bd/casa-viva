@@ -652,6 +652,12 @@ const signLease = catchAsync(async (req, res) => {
       changedAt: new Date(),
     });
 
+    const property = await Property.findById(lease.property);
+    if (property) {
+      property.isBooked = true;
+      await property.save();
+    }
+
     // Schedule move-in if date is in future
     if (lease.startDate && new Date(lease.startDate) > new Date()) {
       lease.metadata = lease.metadata || {};
