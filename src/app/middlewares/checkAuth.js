@@ -10,8 +10,11 @@ export const checkAuth =
   (...roles) =>
   async (req, res, next ) => {
     try {
-      console.log(req?.cookies?.accessToken)
-      const accessToken = req?.headers?.authorization || req?.cookies?.accessToken;
+      
+      let accessToken = req?.cookies?.accessToken || req?.headers?.authorization;
+      if (accessToken?.startsWith("Bearer ")) {
+        accessToken = accessToken.split(" ")[1];
+      }
 
       if (!accessToken) {
         throw new AppError(403, "Missing Access Token");
