@@ -190,6 +190,10 @@ const propertySchema = new mongoose.Schema({
   
   deletedAt: {
     type: Date
+  },
+  isBooked: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true,
