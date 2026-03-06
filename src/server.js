@@ -16,6 +16,7 @@ app.use(
   cors({
     origin: [
       'https://casa-viva-frontend.vercel.app',
+      'http://68.178.170.20:3000',
       'http://localhost:3000'
     ],
     credentials: true,
