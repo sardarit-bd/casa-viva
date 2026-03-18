@@ -12,6 +12,10 @@ const updateProfile = async (userId, payload) => {
 
     if (payload.name) newUserData.name = payload.name;
     if (payload.avatar) newUserData.avatar = payload.avatar;
+    if(payload.email && isUserExist?.role === 'super_admin') newUserData.email = payload.email
+
+    console.log(newUserData)
+
     await User.findByIdAndUpdate(userId, newUserData);
 
 
